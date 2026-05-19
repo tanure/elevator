@@ -1,0 +1,67 @@
+name: release
+
+# Build the Windows NSIS installer and publish it as a GitHub Release asset
+# whenever a `v*` tag is pushed. electron-builder reads `apps/desktop/package.json`
+# `build.publish` and uploads to the configured private repo using GH_TOKEN.
+#
+# Required secrets / settings:
+#   - GITHUB_TOKEN  (default, used by electron-builder as GH_TOKEN)
+#   - The `build.publish.owner` and `build.publish.repo` fields in
+#     apps/desktop/package.json must point at the release host repo. The
+#     workflow's default GITHUB_TOKEN works when releases live in the same repo.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared workspaces
+        run: |
+          npm run build --workspace=@elevator/shared
+          npm run build --workspace=@elevator/data
+
+      - name: Build desktop bundle
+        run: npm run build --workspace=@elevator/desktop
+
+      - name: Package and publish installer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx --workspace=@elevator/desktop electron-builder --win --publish always
+
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          $releaseDir = "apps/desktop/release"
+          Get-ChildItem $releaseDir -Filter "*.exe" | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+            "$hash  $($_.Name)" | Out-File -FilePath "$releaseDir/SHA256SUMS.txt" -Append -Encoding ASCII
+          }
+
+      - name: Upload checksums to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          gh release upload $tag apps/desktop/release/SHA256SUMS.txt --clobber

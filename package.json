@@ -1,0 +1,24 @@
+{
+  "name": "elevator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first desktop command centre for managing the workday.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @elevator/desktop",
+    "build": "npm run build -w @elevator/shared && npm run build -w @elevator/data && npm run build -w @elevator/desktop",
+    "lint": "npm run lint -w @elevator/shared && npm run lint -w @elevator/data && npm run lint -w @elevator/desktop",
+    "test": "npm run test -w @elevator/shared && npm run test -w @elevator/data && npm run test -w @elevator/desktop",
+    "package": "npm run package -w @elevator/desktop"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "electron": "^39.8.10"
+  }
+}

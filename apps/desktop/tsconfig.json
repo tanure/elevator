@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@main/*": ["src/main/*"],
+      "@preload/*": ["src/preload/*"],
+      "@renderer/*": ["src/renderer/src/*"],
+      "@elevator/shared": ["../../packages/shared/src/index.ts"],
+      "@elevator/data": ["../../packages/data/src/index.ts"]
+    }
+  },
+  "include": [
+    "electron.vite.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.cjs",
+    "src"
+  ]
+}
+

@@ -1,0 +1,93 @@
+{
+  "name": "@elevator/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Elevator desktop application.",
+  "author": "Elevator",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "node ../../scripts/dev-desktop.mjs",
+    "build": "tsc -p tsconfig.json --noEmit && electron-vite build",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "package": "npm run build && node ../../scripts/package-desktop.mjs",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "@elevator/data": "file:../../packages/data",
+    "@elevator/shared": "file:../../packages/shared",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.3",
+    "lucide-react": "^0.561.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-router-dom": "^7.15.0",
+    "tailwind-merge": "^3.4.0",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "autoprefixer": "^10.4.23",
+    "electron": "39.8.10",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^4.0.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7",
+    "vitest": "^4.0.13"
+  },
+  "build": {
+    "appId": "com.elevator.desktop",
+    "productName": "Elevator",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": false,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "Elevator"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "OWNER_PLACEHOLDER",
+        "repo": "REPO_PLACEHOLDER",
+        "private": true,
+        "releaseType": "release"
+      }
+    ]
+  }
+}

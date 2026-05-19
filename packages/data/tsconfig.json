@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "paths": {
+      "@elevator/shared": ["../shared/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}
