@@ -1,7 +1,10 @@
 import { app, BrowserWindow } from "electron";
-import { autoUpdater, type UpdateInfo, type ProgressInfo } from "electron-updater";
+import electronUpdaterPkg, { type UpdateInfo, type ProgressInfo } from "electron-updater";
 import type { UpdateState } from "@elevator/shared";
 import { createLogger, log as electronLog } from "./logger.js";
+
+// electron-updater is CommonJS; named ESM imports are not supported.
+const { autoUpdater } = electronUpdaterPkg;
 
 const log = createLogger("updater");
 
