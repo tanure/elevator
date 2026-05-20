@@ -4,10 +4,12 @@ import type {
   AiProviderName,
   AppInfo,
   AuditLogEntry,
+  BackupResult,
   ConnectorTemplate,
   CreateNoteInput,
   CreateTaskInput,
   CreateIntegrationInstanceInput,
+  DiagnosticsSnapshot,
   Integration,
   IntegrationHealth,
   IntegrationMutationResult,
@@ -27,6 +29,25 @@ import type {
 
 const elevatorApi = {
   getAppInfo: (): Promise<AppInfo> => ipcRenderer.invoke("app:getInfo"),
+
+  app: {
+    getInfo: (): Promise<AppInfo> => ipcRenderer.invoke("app:getInfo"),
+    logRendererError: (message: string, stack: string): Promise<void> =>
+      ipcRenderer.invoke("app:logRendererError", message, stack)
+  },
+
+  diagnostics: {
+    snapshot: (): Promise<DiagnosticsSnapshot> => ipcRenderer.invoke("diagnostics:snapshot"),
+    openLogs: (): Promise<void> => ipcRenderer.invoke("diagnostics:openLogs"),
+    openDataFolder: (): Promise<void> => ipcRenderer.invoke("diagnostics:openDataFolder")
+  },
+
+  backup: {
+    exportDatabase: (): Promise<BackupResult | null> =>
+      ipcRenderer.invoke("backup:exportDatabase"),
+    exportJson: (): Promise<BackupResult | null> =>
+      ipcRenderer.invoke("backup:exportJson")
+  },
 
   shell: {
     openExternal: (url: string): Promise<void> =>

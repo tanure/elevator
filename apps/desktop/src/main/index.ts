@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, shell } from "electron";
 import { join } from "node:path";
 import type { AppInfo } from "@elevator/shared";
 import { initDb } from "./db.js";
@@ -11,10 +11,57 @@ import { registerJobHandlers } from "./handlers/jobs.js";
 import { registerIntegrationHandlers } from "./handlers/integrations.js";
 import { registerAgentHandlers } from "./handlers/agents.js";
 import { registerUpdateHandlers } from "./handlers/updates.js";
+import { registerAppHandlers } from "./handlers/app.js";
+import { registerDiagnosticsHandlers } from "./handlers/diagnostics.js";
+import { registerBackupHandlers } from "./handlers/backup.js";
 import { ensureRegistered as ensureIntegrationsRegistered } from "./integrations/registry.js";
 import { ensureProvidersRegistered } from "./ai/registry.js";
 import { ensureBuiltInSkillsRegistered } from "./ai/skills.js";
 import { initUpdater } from "./updater.js";
+import { initLogger, createLogger } from "./logger.js";
+
+initLogger();
+const log = createLogger("main");
+
+let fatalDialogShown = false;
+function showFatalErrorOnce(err: unknown): void {
+  if (fatalDialogShown) return;
+  fatalDialogShown = true;
+  const message = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+  try {
+    dialog.showErrorBox(
+      "Elevator encountered a fatal error",
+      `${message}\n\nA detailed log has been written. The app will now close.`
+    );
+  } catch {
+    // dialog may not be available before app ready; nothing else to do.
+  }
+}
+
+process.on("uncaughtException", (err) => {
+  log.error("uncaughtException", err);
+  showFatalErrorOnce(err);
+  app.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  log.error("unhandledRejection", reason);
+});
+
+app.on("render-process-gone", (_event, webContents, details) => {
+  log.error("render-process-gone", details);
+  if (details.reason !== "clean-exit" && !webContents.isDestroyed()) {
+    try {
+      webContents.reload();
+    } catch (err) {
+      log.error("reload after render-process-gone failed", err);
+    }
+  }
+});
+
+app.on("child-process-gone", (_event, details) => {
+  log.error("child-process-gone", details);
+});
 
 const rendererDevServerUrl = process.env.ELECTRON_RENDERER_URL ?? process.env.VITE_DEV_SERVER_URL;
 
@@ -66,6 +113,9 @@ function registerIpcHandlers(): void {
   registerIntegrationHandlers();
   registerAgentHandlers();
   registerUpdateHandlers();
+  registerAppHandlers();
+  registerDiagnosticsHandlers();
+  registerBackupHandlers();
 }
 
 app.whenReady().then(async () => {

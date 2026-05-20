@@ -1,7 +1,9 @@
 import { app, BrowserWindow } from "electron";
 import { autoUpdater, type UpdateInfo, type ProgressInfo } from "electron-updater";
-import log from "electron-log";
 import type { UpdateState } from "@elevator/shared";
+import { createLogger, log as electronLog } from "./logger.js";
+
+const log = createLogger("updater");
 
 /**
  * Auto-update integration backed by electron-updater + private GitHub Releases.
@@ -66,8 +68,8 @@ export function initUpdater(): void {
     return;
   }
 
-  log.transports.file.level = "info";
-  autoUpdater.logger = log;
+  // logger transports are configured centrally in initLogger().
+  autoUpdater.logger = electronLog;
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowPrerelease = false;

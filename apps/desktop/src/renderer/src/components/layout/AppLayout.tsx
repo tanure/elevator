@@ -4,6 +4,7 @@ import {
   Bot,
   CheckSquare,
   ChevronsUp,
+  HeartPulse,
   LayoutDashboard,
   PlugZap,
   Settings,
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/tasks", label: "Tasks", icon: CheckSquare, end: false },
   { to: "/integrations", label: "Integrations", icon: PlugZap, end: false },
   { to: "/agents", label: "Agents", icon: Bot, end: false },
+  { to: "/diagnostics", label: "Diagnostics", icon: HeartPulse, end: false },
   { to: "/settings", label: "Settings", icon: Settings, end: false },
 ];
 

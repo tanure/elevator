@@ -460,3 +460,22 @@ export interface AppEventMap {
   "update.state": UpdateState;
 }
 
+
+// -- Diagnostics & backup (M8) -----------------------------------------------
+
+export interface DiagnosticsSnapshot {
+  app: { name: string; version: string; packaged: boolean };
+  os: { platform: string; release: string; arch: string };
+  electron: { electron: string; chrome: string; node: string };
+  paths: { userData: string; dbPath: string; logsPath: string };
+  db: { sizeBytes: number | null; lastModified: string | null };
+  integrations: { id: string; templateId: string; name: string; status: string; lastSyncedAt: string | null }[];
+  scheduler: { pendingJobs: number; runningJobs: number; failedJobs: number };
+  capturedAt: string;
+}
+
+export interface BackupResult {
+  filePath: string;
+  bytes: number;
+}
+

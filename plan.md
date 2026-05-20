@@ -412,12 +412,25 @@ Deliverables:
 - Code signing intentionally deferred (no EV cert). Mitigations:
   `signAndEditExecutable:false`, checksums file, README guidance on SmartScreen.
 
-#### Phase 7B — Release readiness (⏸ pending repo owner)
+#### Phase 7B — Release readiness (✅ delivered)
 
-- Fill `build.publish.owner`/`repo` in `apps/desktop/package.json` once the
-  release repository slug is known.
-- Cut first `v0.x.0` tag, verify the workflow produces an installer and the
-  in-app updater picks it up on a second-host install.
+- `build.publish.owner` / `repo` filled in `apps/desktop/package.json`
+  (`tanure` / `elevator`).
+- Ready to cut the first `v0.x.0` tag. Workflow at
+  `.github/workflows/release.yml` will build the NSIS installer, publish via
+  electron-builder, and attach `SHA256SUMS.txt`.
+
+##### How to cut the first release
+
+1. Bump `version` in `apps/desktop/package.json` if needed.
+2. Commit on `main`.
+3. `git tag v0.1.0 && git push origin v0.1.0`.
+4. GitHub Actions runs `release.yml` and publishes the installer as a
+   GitHub Release on `tanure/elevator`.
+5. On a clean Windows host, install the produced
+   `Elevator-Setup-0.1.0.exe`, launch the app, then bump the version,
+   tag `v0.1.1`, push, and verify the in-app updater downloads and
+   installs the new build.
 
 ### Milestone 8: Hardening and developer experience
 
@@ -433,6 +446,72 @@ Deliverables:
 - UI smoke tests.
 - Developer documentation.
 - Architecture decision records.
+
+#### Phase 8A — Crash handling and logging (✅ delivered)
+
+- Centralised `electron-log` bootstrap in `apps/desktop/src/main/logger.ts`
+  with rotated file transport at `userData/logs/main.log` and scoped child
+  loggers via `createLogger(scope)`. Console level depends on `app.isPackaged`.
+- Global handlers in `main/index.ts` for `uncaughtException`,
+  `unhandledRejection`, `render-process-gone`, and `child-process-gone`.
+  Fatal main-process errors surface via a single `dialog.showErrorBox` and
+  `app.exit(1)`.
+- Renderer `ErrorBoundary` (`renderer/src/components/ErrorBoundary.tsx`)
+  catches crashes, forwards `{ message, stack }` to the main logger via
+  `window.elevator.app.logRendererError`, and renders a friendly card with
+  "Copy details" and "Reload app" actions.
+- `registerAppHandlers()` exposes `app:logRendererError`.
+- `updater.ts` switched to a scoped logger (no duplicate transport config).
+
+#### Phase 8B — Diagnostics screen (✅ delivered)
+
+- New `/diagnostics` route (`renderer/src/routes/Diagnostics.tsx`) and nav
+  item with the `HeartPulse` icon in `AppLayout`.
+- `registerDiagnosticsHandlers()` exposes
+  `diagnostics:snapshot`, `diagnostics:openLogs`, `diagnostics:openDataFolder`.
+- `DiagnosticsSnapshot` type added to `@elevator/shared`.
+- Snapshot contains app + OS + Electron versions, paths (userData, logs, db),
+  database size, integration list, scheduler job counts, captured timestamp.
+- Page sections: Application, Paths, Database, Scheduler, Integrations table,
+  Backup & export. "Copy diagnostics" copies the JSON snapshot to the
+  clipboard.
+
+#### Phase 8C — Backup and JSON export (✅ delivered)
+
+- New `packages/data/src/export.ts` with `exportAll(db, opts)` returning an
+  `ExportSnapshot` covering notes, tasks, integrations, jobs, settings,
+  audit log, and agent runs.
+- Recursive secret redaction toggled by `redactSecrets: true`; matches keys
+  by `/(token|secret|key|password|credential|authorization)/i` and walks
+  nested objects.
+- `registerBackupHandlers()` exposes `backup:exportDatabase` (file copy of
+  the `.db` with a save dialog) and `backup:exportJson` (writes the redacted
+  snapshot). User is always prompted for the destination.
+
+#### Phase 8D — Tests (✅ delivered, 28 passing)
+
+- `packages/data` — repositories (existing), `integrations.test.ts`,
+  `export.test.ts` (redaction round-trip), 15 tests total.
+- `apps/desktop` — `event-bus.test.ts` (5 tests), `ics.test.ts`
+  (8 tests covering UTC, all-day, escapes, line folding, missing UID,
+  ORGANIZER CN, skip-on-missing-DTSTART).
+- `apps/desktop/vitest.config.ts` added.
+
+#### Phase 8F — Documentation and ADRs (✅ delivered)
+
+- `docs/architecture.md` — process topology, IPC boundary, workspaces,
+  routing, persistence, diagnostics, updates, testing.
+- `CONTRIBUTING.md` — quick start, daily commands, layout, conventions,
+  PR checklist.
+- `docs/adr/ADR-0001-electron-only-desktop.md`.
+- `docs/adr/ADR-0002-libsql-drizzle-storage.md`.
+- `docs/adr/ADR-0003-event-bus-typed.md`.
+- `docs/adr/ADR-0004-electron-updater-private-releases.md`.
+
+Out of scope for M8 (deferred):
+
+- Playwright end-to-end smoke tests. Defer until the surface stabilises
+  past M9.
 
 ## Suggested repository layout
 

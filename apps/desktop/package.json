@@ -83,8 +83,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "OWNER_PLACEHOLDER",
-        "repo": "REPO_PLACEHOLDER",
+        "owner": "tanure",
+        "repo": "elevator",
         "private": true,
         "releaseType": "release"
       }
