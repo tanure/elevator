@@ -55,9 +55,7 @@ export function CommandPalette(): ReactElement {
   const q = query.toLowerCase();
   const filteredNotes = q
     ? notes
-        .filter(
-          (n) => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q),
-        )
+        .filter((n) => n.title.toLowerCase().includes(q))
         .slice(0, 5)
     : [];
   const filteredTasks = q

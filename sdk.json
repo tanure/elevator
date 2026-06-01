@@ -1,0 +1,280 @@
+{
+  "_id": "@github/copilot-sdk@1.0.0-beta.4",
+  "_rev": "63-bea88fefd8c0b17d3de9695fc180fbe7",
+  "name": "@github/copilot-sdk",
+  "dist-tags": {
+    "unstable": "0.2.1-unstable.0",
+    "latest": "1.0.0-beta.4",
+    "prerelease": "1.0.0-beta.3"
+  },
+  "versions": [
+    "0.0.1",
+    "0.1.9",
+    "0.1.10-preview.0",
+    "0.1.10-preview.1",
+    "0.1.10",
+    "0.1.11",
+    "0.1.12",
+    "0.1.13-preview.0",
+    "0.1.13",
+    "0.1.14",
+    "0.1.15-preview.0",
+    "0.1.15",
+    "0.1.16-preview.0",
+    "0.1.16",
+    "0.1.17",
+    "0.1.18",
+    "0.1.19",
+    "0.1.20",
+    "0.1.21",
+    "0.1.22",
+    "0.1.23-preview.0",
+    "0.1.23-preview.1",
+    "0.1.23",
+    "0.1.24-preview.0",
+    "0.1.24",
+    "0.1.25-preview.0",
+    "0.1.25",
+    "0.1.26-preview.0",
+    "0.1.26",
+    "0.1.27",
+    "0.1.28",
+    "0.1.29",
+    "0.1.30",
+    "0.1.31-unstable.0",
+    "0.1.31",
+    "0.1.32",
+    "0.1.33-preview.0",
+    "0.1.33-preview.1",
+    "0.1.33-preview.2",
+    "0.1.33-preview.3",
+    "0.1.33-preview.4",
+    "0.1.33-unstable.0",
+    "0.1.33-unstable.1",
+    "0.2.0",
+    "0.2.1-preview.0",
+    "0.2.1-preview.1",
+    "0.2.1-preview.2",
+    "0.2.1-unstable.0",
+    "0.2.1",
+    "0.2.2-preview.0",
+    "0.2.2",
+    "0.3.0-preview.0",
+    "0.3.0-preview.1",
+    "0.3.0",
+    "1.0.0-beta.1",
+    "1.0.0-beta.2",
+    "1.0.0-beta.3",
+    "1.0.0-beta.4"
+  ],
+  "time": {
+    "created": "2026-01-08T16:40:22.563Z",
+    "modified": "2026-05-13T09:33:29.018Z",
+    "0.0.1": "2026-01-08T16:40:22.772Z",
+    "0.0.2": "2026-01-08T19:31:23.506Z",
+    "0.1.9": "2026-01-08T19:47:31.081Z",
+    "0.1.10-preview.0": "2026-01-09T16:20:04.923Z",
+    "0.1.10-preview.1": "2026-01-12T18:25:14.587Z",
+    "0.1.10": "2026-01-15T00:47:39.168Z",
+    "0.1.11": "2026-01-15T00:48:39.934Z",
+    "0.1.12": "2026-01-15T02:46:20.871Z",
+    "0.1.13-preview.0": "2026-01-15T22:02:40.341Z",
+    "0.1.13": "2026-01-16T20:48:17.744Z",
+    "0.1.14": "2026-01-19T15:36:23.353Z",
+    "0.1.15-preview.0": "2026-01-20T12:46:16.624Z",
+    "0.1.15": "2026-01-22T04:25:19.162Z",
+    "0.1.16-preview.0": "2026-01-22T17:30:42.132Z",
+    "0.1.16": "2026-01-23T01:29:30.263Z",
+    "0.1.17": "2026-01-23T23:26:00.823Z",
+    "0.1.18": "2026-01-24T18:09:52.750Z",
+    "0.1.19": "2026-01-27T17:50:56.344Z",
+    "0.1.20": "2026-01-30T00:25:18.999Z",
+    "0.1.21": "2026-02-03T23:15:26.368Z",
+    "0.1.22": "2026-02-05T17:33:34.407Z",
+    "0.1.23-preview.0": "2026-02-06T10:01:29.428Z",
+    "0.1.23-preview.1": "2026-02-06T10:30:30.763Z",
+    "0.1.23": "2026-02-06T18:09:12.121Z",
+    "0.1.24-preview.0": "2026-02-10T12:33:03.176Z",
+    "0.1.24": "2026-02-16T17:53:01.656Z",
+    "0.1.25-preview.0": "2026-02-17T16:49:04.762Z",
+    "0.1.25": "2026-02-18T00:05:53.415Z",
+    "0.1.26-preview.0": "2026-02-19T21:59:09.758Z",
+    "0.1.26": "2026-02-23T18:53:48.129Z",
+    "0.1.27": "2026-02-27T11:22:43.020Z",
+    "0.1.28": "2026-02-27T11:33:54.926Z",
+    "0.1.29": "2026-02-27T22:08:25.020Z",
+    "0.1.30": "2026-03-03T17:20:12.403Z",
+    "0.1.31-unstable.0": "2026-03-05T23:25:12.955Z",
+    "0.1.31": "2026-03-07T13:39:13.445Z",
+    "0.1.32": "2026-03-07T15:26:40.902Z",
+    "0.1.33-unstable.0": "2026-03-09T12:47:48.771Z",
+    "0.1.33-unstable.1": "2026-03-09T13:17:44.657Z",
+    "0.1.33-preview.0": "2026-03-12T16:08:16.515Z",
+    "0.1.33-preview.1": "2026-03-13T15:28:30.617Z",
+    "0.1.33-preview.2": "2026-03-13T15:32:41.703Z",
+    "0.1.33-preview.3": "2026-03-19T17:17:17.452Z",
+    "0.1.33-preview.4": "2026-03-20T16:58:47.355Z",
+    "0.2.0": "2026-03-20T19:49:00.747Z",
+    "0.2.1-preview.0": "2026-03-24T22:14:22.400Z",
+    "0.2.1-preview.1": "2026-03-25T17:41:03.064Z",
+    "0.2.1-unstable.0": "2026-04-01T14:03:31.228Z",
+    "0.2.1-preview.2": "2026-04-02T12:57:43.440Z",
+    "0.2.1": "2026-04-03T20:16:39.641Z",
+    "0.2.2-preview.0": "2026-04-07T17:49:43.380Z",
+    "0.2.2": "2026-04-10T09:01:45.069Z",
+    "0.3.0-preview.0": "2026-04-21T15:05:23.749Z",
+    "0.3.0-preview.1": "2026-04-24T14:21:55.314Z",
+    "0.3.0": "2026-04-24T16:03:56.782Z",
+    "1.0.0-beta.1": "2026-05-04T12:51:19.308Z",
+    "1.0.0-beta.2": "2026-05-06T20:00:08.587Z",
+    "1.0.0-beta.3": "2026-05-08T16:07:41.073Z",
+    "1.0.0-beta.4": "2026-05-13T09:33:28.423Z"
+  },
+  "bugs": {
+    "url": "https://github.com/github/copilot-sdk/issues"
+  },
+  "author": "GitHub",
+  "license": "MIT",
+  "homepage": "https://github.com/github/copilot-sdk#readme",
+  "keywords": [
+    "github",
+    "copilot",
+    "sdk",
+    "jsonrpc",
+    "agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/github/copilot-sdk.git"
+  },
+  "description": "TypeScript SDK for programmatic control of GitHub Copilot CLI via JSON-RPC",
+  "maintainers": [
+    "mxie-github <mxie@github.com>",
+    "tidy-dev <tidy-dev@github.com>",
+    "croffz <croffz@outlook.com>",
+    "devm33 <devm33@gmail.com>",
+    "manuelpuyol <manuelpuyol@github.com>",
+    "jonrohan <yes@jonrohan.codes>",
+    "primer-css <design-systems@github.com>",
+    "gracepark <lugraciecy@gmail.com>",
+    "jibrangarcia <jibrang@github.com>",
+    "arelia <arelia.jones@gmail.com>",
+    "tylerthedev <tylerjdev@github.com>",
+    "smockle <clay@smockle.com>",
+    "simurai <sim@simurai.com>",
+    "khiga8 <katehiga8@gmail.com>",
+    "dustin.greif <dustin.greif@gmail.com>",
+    "srt32 <simon.taranto@gmail.com>",
+    "githubbot <dgreif+githubbotnpm@github.com>",
+    "jfuchs <jonathan.fuchs@gmail.com>",
+    "andrialexandrou <andri.j.alexandrou@gmail.com>",
+    "bteng22 <bteng22@gmail.com>",
+    "dustin.savery <dustin.savery@gmail.com>",
+    "ncalteen <ncalteen@github.com>"
+  ],
+  "readmeFilename": "README.md",
+  "_contentLength": 287931,
+  "version": "1.0.0-beta.4",
+  "main": "./dist/cjs/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./extension": {
+      "import": {
+        "types": "./dist/extension.d.ts",
+        "default": "./dist/extension.js"
+      },
+      "require": {
+        "types": "./dist/extension.d.ts",
+        "default": "./dist/cjs/extension.js"
+      }
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf --glob dist *.tgz",
+    "build": "tsx esbuild-copilotsdk-nodejs.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" --ignore-path .prettierignore",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" --ignore-path .prettierignore",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint:fix": "eslint --fix \"src/**/*.ts\" \"test/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "generate": "cd ../scripts/codegen && npm run generate",
+    "update:protocol-version": "tsx scripts/update-protocol-version.ts",
+    "prepublishOnly": "npm run build",
+    "package": "npm run clean && npm run build && node scripts/set-version.js && npm pack && npm version 0.1.0 --no-git-tag-version --allow-same-version"
+  },
+  "dependencies": {
+    "@github/copilot": "^1.0.46",
+    "vscode-jsonrpc": "^8.2.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@platformatic/vfs": "^0.3.0",
+    "@types/node": "^25.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
+    "esbuild": "^0.27.2",
+    "eslint": "^9.0.0",
+    "glob": "^13.0.1",
+    "json-schema": "^0.4.0",
+    "json-schema-to-typescript": "^15.0.4",
+    "prettier": "^3.8.1",
+    "quicktype-core": "^23.2.6",
+    "rimraf": "^6.1.2",
+    "semver": "^7.7.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "gitHead": "4e3dc73c51f3875fc502f6be2025f403b960bf8c",
+  "_nodeVersion": "22.22.2",
+  "_npmVersion": "11.6.3",
+  "dist": {
+    "integrity": "sha512-DcVMN2FWODxamFS9nTls8AW3QsyMnj6JDVBNRVBXaTY9kEhGHCjt8lp7sJp95/vyl52hvEb4/68Oh6SdFU9O/Q==",
+    "shasum": "6286be1433fd29207f3328d89b9c784a50d4402c",
+    "tarball": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.0-beta.4.tgz",
+    "fileCount": 36,
+    "unpackedSize": 600916,
+    "attestations": {
+      "url": "https://registry.npmjs.org/-/npm/v1/attestations/@github%2fcopilot-sdk@1.0.0-beta.4",
+      "provenance": {
+        "predicateType": "https://slsa.dev/provenance/v1"
+      }
+    },
+    "signatures": [
+      {
+        "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U",
+        "sig": "MEUCIQDZFrZioocFNyvYtwcfueC0GagGiVyaIIHRQe5NwOM7EAIgS/ckhi9BpSWCzpAjngnu616IMHtpGJvgzLPipTdAOCw="
+      }
+    ]
+  },
+  "_npmUser": {
+    "name": "GitHub Actions",
+    "email": "npm-oidc-no-reply@github.com",
+    "trustedPublisher": {
+      "id": "github",
+      "oidcConfigId": "oidc:c4a9678c-eafe-44e4-afb8-7565858c4905"
+    }
+  },
+  "directories": {},
+  "_npmOperationalInternal": {
+    "host": "s3://npm-registry-packages-npm-production",
+    "tmp": "tmp/copilot-sdk_1.0.0-beta.4_1778664808269_0.7580154985989316"
+  },
+  "_hasShrinkwrap": false
+}

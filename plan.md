@@ -370,8 +370,9 @@ Delivered:
 
 Out of scope for M6 (tracked separately):
 
-- Microsoft Agent 365 — deferred to a dedicated future milestone (provisionally M9);
-  it is not a Graph wrapper and needs its own connector design.
+- Microsoft Agent 365 — design captured in ADR-0005; scaffold landed
+  alongside M8E and full implementation is tracked under Milestone 9
+  below.
 
 ### Milestone 7: Packaging, releases, and updates
 
@@ -508,10 +509,62 @@ Deliverables:
 - `docs/adr/ADR-0003-event-bus-typed.md`.
 - `docs/adr/ADR-0004-electron-updater-private-releases.md`.
 
-Out of scope for M8 (deferred):
+#### Phase 8E — Playwright Electron smoke tests (✅ delivered)
 
-- Playwright end-to-end smoke tests. Defer until the surface stabilises
-  past M9.
+- `apps/desktop/e2e/` — Playwright config plus a single `smoke.spec.ts`
+  that launches the packaged Electron build (`out/main/index.js`) with
+  an isolated `userData` temp dir.
+- Coverage: app boots and shows the sidebar, Diagnostics route mounts
+  and renders its snapshot, Chat route mounts at `#/chat`.
+- Wired as `npm run -w @elevator/desktop test:e2e`. Devs run
+  `npm run build` first; CI runs both in sequence.
+- `@playwright/test` added as a devDependency. Browsers are not
+  required (Electron only); no `playwright install` step needed.
+
+Out of scope for M8 (now tracked under M9):
+
+- Deeper end-to-end coverage of the AI provider switcher, MCP tool
+  registration, and dashboard cards. Lands incrementally as those
+  surfaces stabilise.
+
+### Milestone 9: Microsoft Agent 365
+
+Treat the Microsoft 365 Agents surface as a first-class connector,
+distinct from the existing Graph-based Calendar/Mail wrappers.
+Design captured in [`docs/adr/ADR-0005-microsoft-agent-365.md`](docs/adr/ADR-0005-microsoft-agent-365.md).
+
+#### Phase 9A — Design + scaffold (✅ delivered)
+
+- ADR-0005 documents why Agent 365 lives outside the existing Graph
+  connectors and what the M9 surface owes the rest of the app.
+- `apps/desktop/src/main/integrations/connectors/m365-agent.ts` ships
+  the `ConnectorTemplate` (tenant / clientId / agentId / endpoint
+  fields) and a stub `Connector` whose lifecycle methods return
+  "not implemented".
+- The module is registered only when
+  `ELEVATOR_ENABLE_M365_AGENT=1`, so the template never appears in
+  the production catalogue.
+
+#### Phase 9B — Auth + token isolation (planned)
+
+- Dedicated Entra app registration with delegated Agents scopes.
+- New `agentsFetch` helper analogous to `graphFetch` but with its own
+  token cache so Calendar/Mail tokens are not reused.
+- Loopback / device-code OAuth flow wired into the connect dialog.
+
+#### Phase 9C — Agent invocation tools (planned)
+
+- `agent.invoke`, `agent.threads.list`, `agent.threads.read` exposed
+  via the standard tool descriptor surface.
+- Sync hook populating a "Recent agent runs" dashboard card.
+- Per-agent rate-limit handling and retry policy.
+
+#### Phase 9D — Dashboard + telemetry (planned)
+
+- Dashboard card surfacing recent agent activity.
+- Wired into diagnostics snapshot so failures surface alongside other
+  integrations.
+- End-to-end tests against a sanctioned test tenant.
 
 ## Suggested repository layout
 

@@ -33,6 +33,18 @@ const TOOLS: ToolDescriptor[] = [
   }
 ];
 
+const CONTEXT_PROVIDERS: ToolDescriptor[] = [
+  {
+    id: "m365cal.today_agenda",
+    integrationId: "m365-calendar",
+    name: "Today's agenda",
+    description: "Auto-context: events on the user's calendar for today.",
+    requiredPermissions: ["tool:execute"],
+    inputSchema: { type: "object", properties: {} },
+    kind: "context"
+  }
+];
+
 async function fetchEvents(ctx: ConnectorContext, days: number): Promise<CalendarEvent[]> {
   const start = new Date();
   const end = new Date(Date.now() + days * 86_400_000);
@@ -122,7 +134,27 @@ export const m365CalendarConnector: Connector = {
     return TOOLS;
   },
 
+  listContextProviders() {
+    return CONTEXT_PROVIDERS;
+  },
+
   async callTool(ctx, toolId, input): Promise<ToolCallResult> {
+    if (toolId === "m365cal.today_agenda") {
+      try {
+        const events = await fetchEvents(ctx, 1);
+        const today = new Date().toISOString().slice(0, 10);
+        return {
+          ok: true,
+          output: events.filter((e) => e.start.slice(0, 10) === today)
+        };
+      } catch (err) {
+        return {
+          ok: false,
+          output: null,
+          error: err instanceof Error ? err.message : String(err)
+        };
+      }
+    }
     if (toolId !== "m365cal.upcoming") {
       return { ok: false, output: null, error: `Unknown tool: ${toolId}` };
     }

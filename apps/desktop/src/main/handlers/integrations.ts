@@ -19,8 +19,10 @@ import {
   disconnectIntegration,
   getSyncData,
   listAllTools,
+  listContextProvidersForInstance,
   listTemplates,
   runHealthCheck,
+  setContextProviderEnabled,
   syncInstance,
   testInstance,
   updateInstance
@@ -127,6 +129,35 @@ export function registerIntegrationHandlers(): void {
         ok: result.ok
       });
       return result;
+    }
+  );
+
+  ipcMain.handle(
+    "integrations:listContextProviders",
+    async (
+      _e,
+      instanceId: string
+    ): Promise<{ providers: ToolDescriptor[]; disabled: string[] }> => {
+      return listContextProvidersForInstance(instanceId);
+    }
+  );
+
+  ipcMain.handle(
+    "integrations:setContextProviderEnabled",
+    async (
+      _e,
+      instanceId: string,
+      providerId: string,
+      enabled: boolean
+    ): Promise<void> => {
+      await setContextProviderEnabled(instanceId, providerId, enabled);
+      await appendAuditLog(
+        getDb(),
+        "user",
+        "integration.contextProvider.toggle",
+        `${instanceId}:${providerId}`,
+        { enabled }
+      );
     }
   );
 }

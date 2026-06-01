@@ -3,6 +3,10 @@ import { join } from "node:path";
 import type { AppInfo } from "@elevator/shared";
 import { initDb } from "./db.js";
 import { startScheduler } from "./scheduler.js";
+import {
+  registerAgentTickHandler,
+  scheduleAgentTicks
+} from "./ai/agent-ticks.js";
 import { registerSettingsHandlers } from "./handlers/settings.js";
 import { registerNoteHandlers } from "./handlers/notes.js";
 import { registerTaskHandlers } from "./handlers/tasks.js";
@@ -10,12 +14,20 @@ import { registerAuditHandlers } from "./handlers/audit.js";
 import { registerJobHandlers } from "./handlers/jobs.js";
 import { registerIntegrationHandlers } from "./handlers/integrations.js";
 import { registerAgentHandlers } from "./handlers/agents.js";
+import { registerChatHandlers } from "./handlers/chat.js";
+import { registerCopilotHandlers } from "./handlers/copilot.js";
 import { registerUpdateHandlers } from "./handlers/updates.js";
 import { registerAppHandlers } from "./handlers/app.js";
 import { registerDiagnosticsHandlers } from "./handlers/diagnostics.js";
 import { registerBackupHandlers } from "./handlers/backup.js";
+import { registerDashboardLayoutHandlers } from "./handlers/dashboardLayouts.js";
+import { registerExtensionHandlers } from "./handlers/extensions.js";
+import { registerViewHandlers } from "./handlers/views.js";
 import { ensureRegistered as ensureIntegrationsRegistered } from "./integrations/registry.js";
 import { ensureProvidersRegistered } from "./ai/registry.js";
+import { hasCopilotToken } from "./ai/copilot-token.js";
+import { setActiveProvider } from "./ai/registry.js";
+import { shutdownCopilotProvider } from "./ai/copilot-provider.js";
 import { ensureBuiltInSkillsRegistered } from "./ai/skills.js";
 import { initUpdater } from "./updater.js";
 import { initLogger, createLogger } from "./logger.js";
@@ -112,20 +124,35 @@ function registerIpcHandlers(): void {
   registerJobHandlers();
   registerIntegrationHandlers();
   registerAgentHandlers();
+  registerChatHandlers();
+  registerCopilotHandlers();
   registerUpdateHandlers();
   registerAppHandlers();
   registerDiagnosticsHandlers();
   registerBackupHandlers();
+  registerDashboardLayoutHandlers();
+  registerExtensionHandlers();
+  registerViewHandlers();
 }
 
 app.whenReady().then(async () => {
   app.setName("Elevator");
   await initDb();
   ensureProvidersRegistered();
-  ensureBuiltInSkillsRegistered();
+  // Default to Copilot when a token is configured; otherwise stay on echo.
+  if (await hasCopilotToken()) {
+    try {
+      setActiveProvider("copilot");
+    } catch {
+      /* registry mismatch — keep default */
+    }
+  }
+  await ensureBuiltInSkillsRegistered();
   await ensureIntegrationsRegistered();
   registerIpcHandlers();
+  registerAgentTickHandler();
   startScheduler();
+  await scheduleAgentTicks();
   createMainWindow();
   initUpdater();
 
@@ -143,6 +170,7 @@ app.whenReady().then(async () => {
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
+  shutdownCopilotProvider().catch(() => {});
 });
 
 app.on("window-all-closed", () => {

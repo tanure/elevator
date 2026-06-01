@@ -38,6 +38,7 @@ function validateField(field: ConfigFieldDescriptor, value: unknown): string | n
 
   switch (field.type) {
     case "string":
+    case "multiline":
     case "secret":
     case "path":
       if (typeof value !== "string") return `${field.label} must be text.`;

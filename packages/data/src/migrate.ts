@@ -123,6 +123,199 @@ const migrations: Migration[] = [
       ALTER TABLE integrations ADD COLUMN sync_interval_sec INTEGER;
       UPDATE integrations SET display_name = name WHERE display_name = '';
     `
+  },
+  {
+    version: 4,
+    name: "skills_and_agents",
+    up: `
+      ALTER TABLE agent_runs ADD COLUMN agent_id TEXT;
+      ALTER TABLE agent_runs ADD COLUMN tool_calls TEXT NOT NULL DEFAULT '[]';
+
+      CREATE TABLE IF NOT EXISTS skills (
+        id              TEXT    PRIMARY KEY,
+        name            TEXT    NOT NULL,
+        description     TEXT    NOT NULL DEFAULT '',
+        system_prompt   TEXT    NOT NULL DEFAULT '',
+        prompt_template TEXT    NOT NULL DEFAULT '',
+        input_variables TEXT    NOT NULL DEFAULT '[]',
+        allowed_tools   TEXT    NOT NULL DEFAULT '[]',
+        is_built_in     INTEGER NOT NULL DEFAULT 0,
+        created_at      INTEGER NOT NULL,
+        updated_at      INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS agents (
+        id             TEXT    PRIMARY KEY,
+        name           TEXT    NOT NULL,
+        description    TEXT    NOT NULL DEFAULT '',
+        provider       TEXT    NOT NULL DEFAULT 'echo',
+        model          TEXT,
+        skill_ids      TEXT    NOT NULL DEFAULT '[]',
+        max_tool_calls INTEGER NOT NULL DEFAULT 5,
+        is_built_in    INTEGER NOT NULL DEFAULT 0,
+        created_at     INTEGER NOT NULL,
+        updated_at     INTEGER NOT NULL
+      );
+    `
+  },
+  {
+    version: 5,
+    name: "chat",
+    up: `
+      CREATE TABLE IF NOT EXISTS chat_sessions (
+        id            TEXT    PRIMARY KEY,
+        title         TEXT    NOT NULL DEFAULT 'New chat',
+        provider      TEXT    NOT NULL DEFAULT 'echo',
+        model         TEXT,
+        system_prompt TEXT    NOT NULL DEFAULT '',
+        created_at    INTEGER NOT NULL,
+        updated_at    INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id         TEXT    PRIMARY KEY,
+        session_id TEXT    NOT NULL,
+        role       TEXT    NOT NULL,
+        content    TEXT    NOT NULL DEFAULT '',
+        provider   TEXT,
+        model      TEXT,
+        created_at INTEGER NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_session
+        ON chat_messages(session_id, created_at);
+    `
+  },
+  {
+    version: 6,
+    name: "chat-tool-calls",
+    up: `
+      ALTER TABLE chat_sessions ADD COLUMN allowed_tools TEXT NOT NULL DEFAULT '[]';
+      ALTER TABLE chat_sessions ADD COLUMN max_tool_calls INTEGER NOT NULL DEFAULT 5;
+      ALTER TABLE chat_messages ADD COLUMN tool_calls TEXT;
+    `
+  },
+  {
+    version: 7,
+    name: "agent-depth",
+    up: `
+      ALTER TABLE agents ADD COLUMN allowed_tools TEXT NOT NULL DEFAULT '[]';
+      ALTER TABLE agents ADD COLUMN system_prompt TEXT NOT NULL DEFAULT '';
+      ALTER TABLE agents ADD COLUMN goal TEXT NOT NULL DEFAULT '';
+      ALTER TABLE agents ADD COLUMN schedule TEXT NOT NULL DEFAULT '{"kind":"none"}';
+      ALTER TABLE chat_sessions ADD COLUMN agent_id TEXT;
+    `
+  },
+  {
+    version: 8,
+    name: "tasks-rich",
+    up: `
+      ALTER TABLE tasks ADD COLUMN start_at INTEGER;
+      CREATE TABLE IF NOT EXISTS task_labels (
+        id          TEXT PRIMARY KEY,
+        name        TEXT NOT NULL,
+        color       TEXT NOT NULL DEFAULT '#64748b',
+        created_at  INTEGER NOT NULL,
+        updated_at  INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS task_task_labels (
+        task_id   TEXT NOT NULL,
+        label_id  TEXT NOT NULL,
+        PRIMARY KEY (task_id, label_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_task_task_labels_task ON task_task_labels (task_id);
+      CREATE INDEX IF NOT EXISTS idx_task_task_labels_label ON task_task_labels (label_id);
+      CREATE TABLE IF NOT EXISTS task_suggestions (
+        id            TEXT PRIMARY KEY,
+        agent_id      TEXT,
+        agent_run_id  TEXT,
+        title         TEXT NOT NULL,
+        description   TEXT,
+        priority      TEXT NOT NULL DEFAULT 'medium',
+        due_at        INTEGER,
+        status        TEXT NOT NULL DEFAULT 'pending',
+        created_at    INTEGER NOT NULL,
+        resolved_at   INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_task_suggestions_status ON task_suggestions (status);
+    `
+  },
+  {
+    version: 9,
+    name: "notes-blocks",
+    up: `
+      ALTER TABLE notes ADD COLUMN content_json TEXT NOT NULL DEFAULT '[]';
+      ALTER TABLE notes ADD COLUMN folder_id TEXT;
+      UPDATE notes SET content_json = json_array(
+        json_object(
+          'id', lower(hex(randomblob(8))),
+          'type', 'paragraph',
+          'props', json_object('textColor','default','backgroundColor','default','textAlignment','left'),
+          'content', CASE
+            WHEN content IS NULL OR length(content) = 0 THEN json_array()
+            ELSE json_array(json_object('type','text','text', content, 'styles', json_object()))
+          END,
+          'children', json_array()
+        )
+      );
+      ALTER TABLE notes DROP COLUMN content;
+      CREATE TABLE IF NOT EXISTS note_folders (
+        id          TEXT PRIMARY KEY,
+        name        TEXT NOT NULL,
+        parent_id   TEXT,
+        created_at  INTEGER NOT NULL,
+        updated_at  INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_note_folders_parent ON note_folders (parent_id);
+      CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes (folder_id);
+    `
+  },
+  {
+    version: 10,
+    name: "dashboard-extensions-views",
+    up: `
+      ALTER TABLE dashboard_layouts ADD COLUMN view_id TEXT;
+      CREATE INDEX IF NOT EXISTS idx_dashboard_layouts_view ON dashboard_layouts (view_id);
+
+      CREATE TABLE IF NOT EXISTS extensions (
+        id               TEXT PRIMARY KEY,
+        title            TEXT NOT NULL,
+        description      TEXT NOT NULL DEFAULT '',
+        kind             TEXT NOT NULL DEFAULT 'card',
+        agent_id         TEXT,
+        skill_id         TEXT,
+        refresh_schedule TEXT NOT NULL DEFAULT '',
+        render_hints     TEXT NOT NULL DEFAULT '{}',
+        is_enabled       INTEGER NOT NULL DEFAULT 1,
+        created_at       INTEGER NOT NULL,
+        updated_at       INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS views (
+        id                       TEXT PRIMARY KEY,
+        group_name               TEXT NOT NULL,
+        name                     TEXT NOT NULL,
+        icon                     TEXT NOT NULL DEFAULT 'Folder',
+        layout_id                TEXT,
+        default_chat_session_id  TEXT,
+        agent_ids                TEXT NOT NULL DEFAULT '[]',
+        parameters               TEXT NOT NULL DEFAULT '{}',
+        template_id              TEXT,
+        created_at               INTEGER NOT NULL,
+        updated_at               INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_views_group ON views (group_name);
+
+      CREATE TABLE IF NOT EXISTS view_templates (
+        id          TEXT PRIMARY KEY,
+        name        TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        body        TEXT NOT NULL DEFAULT '{}',
+        is_built_in INTEGER NOT NULL DEFAULT 0,
+        created_at  INTEGER NOT NULL,
+        updated_at  INTEGER NOT NULL
+      );
+    `
   }
 ];
 

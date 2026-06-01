@@ -13,6 +13,10 @@ interface IntegrationsState {
   integrations: Integration[];
   templates: ConnectorTemplate[];
   tools: ToolDescriptor[];
+  contextProviders: Record<
+    string,
+    { providers: ToolDescriptor[]; disabled: string[] }
+  >;
   health: Record<string, IntegrationHealth>;
   loading: boolean;
   load: () => Promise<void>;
@@ -31,12 +35,18 @@ interface IntegrationsState {
     config: Record<string, unknown>,
     existingInstanceId?: string
   ) => Promise<IntegrationHealth>;
+  setContextProviderEnabled: (
+    instanceId: string,
+    providerId: string,
+    enabled: boolean
+  ) => Promise<void>;
 }
 
 export const useIntegrationsStore = create<IntegrationsState>((set, get) => ({
   integrations: [],
   templates: [],
   tools: [],
+  contextProviders: {},
   health: {},
   loading: false,
 
@@ -48,7 +58,18 @@ export const useIntegrationsStore = create<IntegrationsState>((set, get) => ({
         window.elevator.integrations.listTemplates(),
         window.elevator.integrations.listTools()
       ]);
-      set({ integrations, templates, tools });
+      const entries = await Promise.all(
+        integrations.map(async (i) => {
+          const cp = await window.elevator.integrations.listContextProviders(i.id);
+          return [i.id, cp] as const;
+        })
+      );
+      const contextProviders: Record<
+        string,
+        { providers: ToolDescriptor[]; disabled: string[] }
+      > = {};
+      for (const [id, cp] of entries) contextProviders[id] = cp;
+      set({ integrations, templates, tools, contextProviders });
     } finally {
       set({ loading: false });
     }
@@ -96,5 +117,14 @@ export const useIntegrationsStore = create<IntegrationsState>((set, get) => ({
 
   test: async (templateId, config, existingInstanceId) => {
     return window.elevator.integrations.test(templateId, config, existingInstanceId);
+  },
+
+  setContextProviderEnabled: async (instanceId, providerId, enabled) => {
+    await window.elevator.integrations.setContextProviderEnabled(
+      instanceId,
+      providerId,
+      enabled
+    );
+    await get().load();
   }
 }));

@@ -144,7 +144,9 @@ export function ConnectorForm({
         }
 
         const isSecret = field.type === "secret";
-        const isLong = field.type === "string" && (field.help ?? "").length > 80;
+        const isMultiline = field.type === "multiline";
+        const isLong =
+          isMultiline || (field.type === "string" && (field.help ?? "").length > 80);
         const inputType =
           field.type === "number"
             ? "number"

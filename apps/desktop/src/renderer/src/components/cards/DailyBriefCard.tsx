@@ -5,7 +5,7 @@ import { Button } from "@renderer/components/ui/button";
 import { useAgentsStore } from "@renderer/stores/useAgentsStore";
 
 export function DailyBriefCard(): ReactElement {
-  const { history, lastRun, running, load, run } = useAgentsStore();
+  const { history, lastRun, running, load, runSkill } = useAgentsStore();
 
   useEffect(() => {
     void load();
@@ -28,7 +28,7 @@ export function DailyBriefCard(): ReactElement {
             size="sm"
             variant="ghost"
             disabled={running}
-            onClick={() => void run("daily-brief")}
+            onClick={() => void runSkill("daily-brief")}
           >
             <Play className="mr-1 h-3 w-3" />
             {running ? "Running…" : "Refresh"}

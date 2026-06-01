@@ -86,12 +86,23 @@ queued jobs, and emits `integration.synced` / `job.completed` /
 
 ### 3.4 Integrations
 
-`integrations/` hosts the connector registry. Each connector (Microsoft
-365 mail/calendar, generic ICS, HTTP report, WorkIQ MCP, CLI) implements
-a tiny interface: `connect`, `disconnect`, and optional `sync`.
+`integrations/` hosts the connector registry. Built-in connectors
+(Microsoft 365 mail/calendar, generic ICS, HTTP report, local CLI, and a
+generic MCP Server) implement a tiny interface: `check`, `listTools`,
+`callTool`, plus optional `connect`, `sync`, and
+`listContextProviders`.
 
-OAuth tokens are stored using Electron `safeStorage` (encrypted at rest
-with the user's OS credential) — never in plaintext in the database.
+The **MCP Server** connector is template-driven and multi-instance: the
+user enters a `command`, `args`, optional `env` and `cwd`, and the
+connector spawns the server over stdio via
+`@modelcontextprotocol/sdk`, discovers its tools via `listTools()`, and
+exposes them to the agent runtime as `mcp:<instanceId>:<toolName>`. This
+is how third-party MCP servers (e.g. `npx -y @microsoft/work-iq`) plug
+in without code changes.
+
+OAuth tokens and other secrets are stored using Electron `safeStorage`
+(encrypted at rest with the user's OS credential) — never in plaintext
+in the database.
 
 ## 4. Preload
 
@@ -179,12 +190,16 @@ silently and the renderer is notified via `update.state` events. The
 - `packages/data` — unit tests for repositories, settings round-trips,
   and `exportAll` redaction behaviour (in-memory libSQL).
 - `apps/desktop` — unit tests for the typed event bus and the ICS parser.
+- `apps/desktop/e2e/` — Playwright smoke tests that drive the packaged
+  Electron build. Run with `npm run build` then
+  `npm run -w @elevator/desktop test:e2e`. Each spec uses an isolated
+  `userData` directory so it never touches the real profile.
 
-Run all tests with `npm test` from the repository root.
+Run all unit tests with `npm test` from the repository root.
 
 ## 10. Known gaps
 
-- No end-to-end Playwright tests yet; the surface is small enough that
-  unit tests + manual smoke covers the MVP.
+- Playwright coverage is intentionally minimal (boot, sidebar, two
+  routes). Broader UI flows still rely on manual smoke.
 - No telemetry. Diagnostics are local-only and shared only when the user
   explicitly exports them.

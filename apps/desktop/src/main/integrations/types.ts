@@ -29,6 +29,14 @@ export interface Connector {
   /** Tools the connector exposes to the agent runtime. */
   listTools(ctx: ConnectorContext): ToolDescriptor[];
 
+  /**
+   * Passive "context providers" — typically zero-input fetchers like
+   * "recent_inbox" or "today_agenda" that the orchestrator surfaces as
+   * auto-callable tools. Implementations handle their providerIds via the
+   * normal `callTool` path (kind defaults to "context" in the registry).
+   */
+  listContextProviders?(ctx: ConnectorContext): ToolDescriptor[];
+
   /** Execute a tool by id; implementations must validate input themselves. */
   callTool(
     ctx: ConnectorContext,

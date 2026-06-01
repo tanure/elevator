@@ -6,6 +6,7 @@ import {
   Power,
   PowerOff,
   Wrench,
+  Sparkles,
   Pencil,
   Trash2,
   RotateCw
@@ -44,6 +45,7 @@ export function Integrations(): ReactElement {
     integrations,
     templates,
     tools,
+    contextProviders,
     health,
     loading,
     load,
@@ -51,7 +53,8 @@ export function Integrations(): ReactElement {
     disconnect,
     check,
     sync,
-    remove
+    remove,
+    setContextProviderEnabled
   } = useIntegrationsStore();
 
   const [addOpen, setAddOpen] = useState(false);
@@ -64,6 +67,7 @@ export function Integrations(): ReactElement {
   const toolsByIntegration = useMemo(() => {
     const map = new Map<string, typeof tools>();
     for (const tool of tools) {
+      if (tool.kind === "context") continue;
       const list = map.get(tool.integrationId) ?? [];
       list.push(tool);
       map.set(tool.integrationId, list);
@@ -176,6 +180,55 @@ export function Integrations(): ReactElement {
                       </ul>
                     </div>
                   ) : null}
+
+                  {(() => {
+                    const cp = contextProviders[integration.id];
+                    if (!cp || cp.providers.length === 0) return null;
+                    const disabled = new Set(cp.disabled);
+                    return (
+                      <div>
+                        <p className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                          <Sparkles className="h-3 w-3" /> Context providers
+                        </p>
+                        <ul className="space-y-1 text-xs">
+                          {cp.providers.map((p) => {
+                            const enabled = !disabled.has(p.id);
+                            return (
+                              <li
+                                key={p.id}
+                                className="flex items-start justify-between gap-2"
+                              >
+                                <div className="min-w-0">
+                                  <code className="rounded bg-muted px-1 py-0.5">
+                                    {p.id}
+                                  </code>{" "}
+                                  <span className="text-muted-foreground">
+                                    {p.description}
+                                  </span>
+                                </div>
+                                <label className="flex shrink-0 items-center gap-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={enabled}
+                                    onChange={(e) =>
+                                      void setContextProviderEnabled(
+                                        integration.id,
+                                        p.id,
+                                        e.target.checked
+                                      )
+                                    }
+                                  />
+                                  <span className="text-muted-foreground">
+                                    {enabled ? "on" : "off"}
+                                  </span>
+                                </label>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex flex-wrap gap-2 pt-1">
                     {integration.status === "connected" ? (

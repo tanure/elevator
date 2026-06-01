@@ -38,12 +38,12 @@ describe("exportAll", () => {
   });
 
   it("captures inserted notes, tasks and settings", async () => {
-    await createNote(db, "n1", { title: "Hello", content: "World" });
+    await createNote(db, "n1", { title: "Hello", contentJson: [] });
     await createTask(db, "t1", { title: "Do it" });
     await setSetting(db, "theme", "dark");
     const snapshot = await exportAll(db);
     expect(snapshot.notes).toHaveLength(1);
-    expect(snapshot.notes[0]).toMatchObject({ title: "Hello", content: "World" });
+    expect(snapshot.notes[0]).toMatchObject({ title: "Hello" });
     expect(snapshot.tasks).toHaveLength(1);
     expect(snapshot.tasks[0]).toMatchObject({ title: "Do it" });
     expect(snapshot.settings).toMatchObject({ theme: "dark" });

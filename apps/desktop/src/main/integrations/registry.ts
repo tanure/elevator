@@ -10,9 +10,11 @@ import type {
 import {
   deleteIntegration,
   getIntegration,
+  getSetting,
   listIntegrations,
   setIntegrationStatus,
   setIntegrationSync,
+  setSetting,
   upsertIntegration
 } from "@elevator/data";
 import { getDb } from "../db.js";
@@ -24,11 +26,12 @@ import {
   setSecret
 } from "../secrets.js";
 import { cliModule } from "./connectors/cli.js";
-import { workIqModule } from "./connectors/workiq.js";
 import { icsModule } from "./connectors/ics.js";
 import { httpReportModule } from "./connectors/http-report.js";
+import { m365AgentModule } from "./connectors/m365-agent.js";
 import { m365CalendarModule } from "./connectors/m365-calendar.js";
 import { m365MailModule } from "./connectors/m365-mail.js";
+import { mcpModule } from "./connectors/mcp.js";
 import type { Connector, ConnectorContext, ConnectorModule } from "./types.js";
 import { validateConfig } from "./validation.js";
 import { clearCache, getSyncCache } from "./cache.js";
@@ -58,11 +61,16 @@ export function listTemplates(): ConnectorTemplate[] {
 export async function ensureRegistered(): Promise<void> {
   if (modules.size === 0) {
     registerModule(cliModule);
-    registerModule(workIqModule);
     registerModule(icsModule);
     registerModule(httpReportModule);
     registerModule(m365CalendarModule);
     registerModule(m365MailModule);
+    registerModule(mcpModule);
+    // Microsoft Agent 365 — preview scaffold (M9). See ADR-0005.
+    // Off by default so it never appears in the production catalogue.
+    if (process.env.ELEVATOR_ENABLE_M365_AGENT === "1") {
+      registerModule(m365AgentModule);
+    }
   }
 }
 
@@ -70,10 +78,26 @@ export async function ensureRegistered(): Promise<void> {
  * Build the runtime config a connector sees: non-secret values come straight
  * from the row, secret values are decrypted from the OS credential vault.
  */
+function resolveModule(
+  instance: Pick<Integration, "templateId" | "name">
+): RegisteredModule | undefined {
+  if (instance.templateId) {
+    const direct = modules.get(instance.templateId);
+    if (direct) return direct;
+  }
+  if (!instance.name) return undefined;
+  const nameLc = instance.name.trim().toLowerCase();
+  for (const mod of modules.values()) {
+    if (mod.template.name.toLowerCase() === nameLc) return mod;
+    if (mod.template.id.toLowerCase() === nameLc) return mod;
+  }
+  return undefined;
+}
+
 async function resolveRuntimeConfig(
   instance: Integration
 ): Promise<Record<string, unknown>> {
-  const tpl = modules.get(instance.templateId ?? instance.name)?.template;
+  const tpl = resolveModule(instance)?.template;
   const out: Record<string, unknown> = { ...instance.config };
   if (!tpl) return out;
   for (const field of tpl.configSchema) {
@@ -86,7 +110,7 @@ async function resolveRuntimeConfig(
 }
 
 function moduleForInstance(instance: Integration): RegisteredModule | undefined {
-  return modules.get(instance.templateId ?? instance.name);
+  return resolveModule(instance);
 }
 
 export async function listAllTools(): Promise<ToolDescriptor[]> {
@@ -99,10 +123,58 @@ export async function listAllTools(): Promise<ToolDescriptor[]> {
     const cfg = await resolveRuntimeConfig(inst);
     const ctx: ConnectorContext = { instanceId: inst.id, config: cfg };
     for (const t of mod.connector.listTools(ctx)) {
-      tools.push({ ...t, integrationId: inst.id });
+      tools.push({ ...t, integrationId: inst.id, kind: t.kind ?? "tool" });
+    }
+    if (mod.connector.listContextProviders) {
+      const disabled = await getDisabledContextProviders(inst.id);
+      for (const p of mod.connector.listContextProviders(ctx)) {
+        if (disabled.has(p.id)) continue;
+        tools.push({ ...p, integrationId: inst.id, kind: "context" });
+      }
     }
   }
   return tools;
+}
+
+const CONTEXT_TOGGLE_KEY = (instanceId: string): string =>
+  `integration.contextProviders.disabled.${instanceId}`;
+
+async function getDisabledContextProviders(instanceId: string): Promise<Set<string>> {
+  const raw = await getSetting(getDb(), CONTEXT_TOGGLE_KEY(instanceId));
+  if (!raw) return new Set();
+  try {
+    const arr = JSON.parse(raw) as unknown;
+    return Array.isArray(arr) ? new Set(arr.filter((v): v is string => typeof v === "string")) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export async function listContextProvidersForInstance(
+  instanceId: string
+): Promise<{ providers: ToolDescriptor[]; disabled: string[] }> {
+  const db = getDb();
+  const inst = await getIntegration(db, instanceId);
+  if (!inst) return { providers: [], disabled: [] };
+  const mod = moduleForInstance(inst);
+  if (!mod || !mod.connector.listContextProviders) return { providers: [], disabled: [] };
+  const cfg = await resolveRuntimeConfig(inst);
+  const providers = mod.connector
+    .listContextProviders({ instanceId: inst.id, config: cfg })
+    .map((p) => ({ ...p, integrationId: inst.id, kind: "context" as const }));
+  const disabled = [...(await getDisabledContextProviders(instanceId))];
+  return { providers, disabled };
+}
+
+export async function setContextProviderEnabled(
+  instanceId: string,
+  providerId: string,
+  enabled: boolean
+): Promise<void> {
+  const disabled = await getDisabledContextProviders(instanceId);
+  if (enabled) disabled.delete(providerId);
+  else disabled.add(providerId);
+  await setSetting(getDb(), CONTEXT_TOGGLE_KEY(instanceId), JSON.stringify([...disabled]));
 }
 
 /**

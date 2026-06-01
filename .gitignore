@@ -6,6 +6,8 @@ release-dev*/
 .tmp-electron-extract/
 coverage/
 .vite/
+playwright-report/
+test-results/
 .env
 .env.*
 !.env.example

@@ -22,7 +22,7 @@ export function QuickActionsCard(): ReactElement {
 
   const handleCreateNote = async (): Promise<void> => {
     if (!noteTitle.trim()) return;
-    await createNote({ title: noteTitle.trim(), content: "" });
+    await createNote({ title: noteTitle.trim(), contentJson: [] });
     setNoteTitle("");
     void navigate("/notes");
   };

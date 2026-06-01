@@ -1,44 +1,115 @@
 import { create } from "zustand";
-import type { AgentRun, AiProviderName, SkillManifest } from "@elevator/shared";
+import type {
+  AgentRecord,
+  AgentRun,
+  AgentTool,
+  AiProviderName,
+  CreateAgentInput,
+  CreateSkillInput,
+  SkillRecord,
+  UpdateAgentInput,
+  UpdateSkillInput
+} from "@elevator/shared";
 
 interface AgentsState {
-  skills: SkillManifest[];
+  skills: SkillRecord[];
+  agents: AgentRecord[];
+  availableTools: AgentTool[];
+  history: AgentRun[];
   providers: AiProviderName[];
   activeProvider: AiProviderName | null;
-  history: AgentRun[];
   lastRun: AgentRun | null;
   running: boolean;
+
   load: () => Promise<void>;
-  run: (skillId: string, input?: Record<string, unknown>) => Promise<AgentRun>;
+
+  createSkill: (input: CreateSkillInput) => Promise<SkillRecord>;
+  updateSkill: (id: string, input: UpdateSkillInput) => Promise<void>;
+  deleteSkill: (id: string) => Promise<void>;
+  runSkill: (skillId: string, input?: Record<string, unknown>) => Promise<AgentRun>;
+
+  createAgent: (input: CreateAgentInput) => Promise<AgentRecord>;
+  updateAgent: (id: string, input: UpdateAgentInput) => Promise<void>;
+  deleteAgent: (id: string) => Promise<void>;
+  runAgent: (
+    agentId: string,
+    skillId: string,
+    input?: Record<string, unknown>
+  ) => Promise<AgentRun>;
+
   setProvider: (name: AiProviderName) => Promise<void>;
 }
 
 export const useAgentsStore = create<AgentsState>((set, get) => ({
   skills: [],
+  agents: [],
+  availableTools: [],
+  history: [],
   providers: [],
   activeProvider: null,
-  history: [],
   lastRun: null,
   running: false,
 
   load: async () => {
-    const [skills, providersInfo, history] = await Promise.all([
-      window.elevator.agents.listSkills(),
-      window.elevator.agents.listProviders(),
-      window.elevator.agents.history(50)
+    const [skills, agents, tools, history, providersInfo] = await Promise.all([
+      window.elevator.skills.list(),
+      window.elevator.agents.list(),
+      window.elevator.agents.listAvailableTools(),
+      window.elevator.agents.history(50),
+      window.elevator.agents.listProviders()
     ]);
     set({
       skills,
+      agents,
+      availableTools: tools,
+      history,
       providers: providersInfo.providers,
-      activeProvider: providersInfo.active,
-      history
+      activeProvider: providersInfo.active
     });
   },
 
-  run: async (skillId, input = {}) => {
+  createSkill: async (input) => {
+    const skill = await window.elevator.skills.create(input);
+    await get().load();
+    return skill;
+  },
+  updateSkill: async (id, input) => {
+    await window.elevator.skills.update(id, input);
+    await get().load();
+  },
+  deleteSkill: async (id) => {
+    await window.elevator.skills.delete(id);
+    await get().load();
+  },
+  runSkill: async (skillId, input = {}) => {
     set({ running: true });
     try {
-      const run = await window.elevator.agents.run(skillId, input);
+      const run = await window.elevator.skills.run(skillId, input);
+      set({ lastRun: run });
+      await get().load();
+      return run;
+    } finally {
+      set({ running: false });
+    }
+  },
+
+  createAgent: async (input) => {
+    const agent = await window.elevator.agents.create(input);
+    await get().load();
+    return agent;
+  },
+  updateAgent: async (id, input) => {
+    await window.elevator.agents.update(id, input);
+    await get().load();
+  },
+  deleteAgent: async (id) => {
+    await window.elevator.agents.delete(id);
+    await get().load();
+  },
+  runAgent: async (agentId, skillId, input = {}) => {
+    set({ running: true });
+    try {
+      const run = await window.elevator.agents.runSkill(agentId, skillId, input);
       set({ lastRun: run });
       await get().load();
       return run;

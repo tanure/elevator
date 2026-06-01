@@ -9,8 +9,10 @@ import { Notes } from "@renderer/routes/Notes";
 import { Tasks } from "@renderer/routes/Tasks";
 import { Integrations } from "@renderer/routes/Integrations";
 import { Agents } from "@renderer/routes/Agents";
+import { Chat } from "@renderer/routes/Chat";
 import { Settings } from "@renderer/routes/Settings";
 import { Diagnostics } from "@renderer/routes/Diagnostics";
+import { ViewPage } from "@renderer/routes/ViewPage";
 
 // Register all built-in dashboard cards before first render
 import "@renderer/components/cards/register";
@@ -32,8 +34,10 @@ export function App(): ReactElement {
             <Route path="tasks" element={<Tasks />} />
             <Route path="integrations" element={<Integrations />} />
             <Route path="agents" element={<Agents />} />
+            <Route path="chat" element={<Chat />} />
             <Route path="settings" element={<Settings />} />
             <Route path="diagnostics" element={<Diagnostics />} />
+            <Route path="views/:viewId" element={<ViewPage />} />
           </Route>
         </Routes>
         <UpdateDialog />

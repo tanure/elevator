@@ -32,6 +32,19 @@ const TOOLS: ToolDescriptor[] = [
   }
 ];
 
+const CONTEXT_PROVIDERS: ToolDescriptor[] = [
+  {
+    id: "m365mail.recent_inbox",
+    integrationId: "m365-mail",
+    name: "Recent inbox",
+    description:
+      "Auto-context: the user's last few inbox messages (subject, sender, preview).",
+    requiredPermissions: ["tool:execute"],
+    inputSchema: { type: "object", properties: {} },
+    kind: "context"
+  }
+];
+
 async function fetchMail(ctx: ConnectorContext, top: number): Promise<MailMessage[]> {
   const data = await graphFetch<{ value: GraphMessage[] }>(
     ctx,
@@ -122,8 +135,12 @@ export const m365MailConnector: Connector = {
     return TOOLS;
   },
 
+  listContextProviders() {
+    return CONTEXT_PROVIDERS;
+  },
+
   async callTool(ctx, toolId, input): Promise<ToolCallResult> {
-    if (toolId !== "m365mail.recent") {
+    if (toolId !== "m365mail.recent" && toolId !== "m365mail.recent_inbox") {
       return { ok: false, output: null, error: `Unknown tool: ${toolId}` };
     }
     const top = Number(input.top ?? ctx.config.topCount ?? 15);
