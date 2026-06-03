@@ -194,7 +194,7 @@ export function ChatPanel(props: {
             <StreamingBubble text={liveStream} />
           )}
           {sending && (liveStream === null || liveStream.length === 0) && (
-            <div className="text-sm text-muted-foreground">Thinking…</div>
+            <ThinkingIndicator />
           )}
         </div>
       </div>
@@ -295,7 +295,8 @@ export function MessageBubble({ message }: { message: ChatMessage }): ReactEleme
   const isAssistant = message.role === "assistant";
   const hasTools = message.toolCalls.length > 0;
   return (
-    <div className={"flex " + (isUser ? "justify-end" : "justify-start")}>
+    <div className={"flex " + (isUser ? "justify-end" : "justify-start gap-2")}>
+      {!isUser && <CopilotAvatar />}
       <div
         className={
           "max-w-[80%] rounded-lg px-3 py-2 text-sm " +
@@ -306,35 +307,58 @@ export function MessageBubble({ message }: { message: ChatMessage }): ReactEleme
               : "bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100")
         }
       >
-        {!isUser && (
-          <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="font-medium capitalize">{message.role}</span>
-            {message.provider && (
-              <span className="font-mono">{message.provider}</span>
-            )}
-          </div>
-        )}
         {isAssistant ? (
           <MarkdownBody content={message.content} />
+        ) : !isUser ? (
+          <>
+            <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium capitalize">{message.role}</span>
+            </div>
+            <div className="whitespace-pre-wrap break-words">{message.content}</div>
+          </>
         ) : (
           <div className="whitespace-pre-wrap break-words">{message.content}</div>
         )}
         {hasTools && <ToolCallsBlock calls={message.toolCalls} />}
       </div>
+      {isUser && (
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-[11px] font-bold text-foreground">
+          You
+        </div>
+      )}
     </div>
   );
 }
 
 export function StreamingBubble({ text }: { text: string }): ReactElement {
   return (
-    <div className="flex justify-start">
+    <div className="flex justify-start gap-2">
+      <CopilotAvatar />
       <div className="max-w-[80%] rounded-lg bg-muted px-3 py-2 text-sm">
-        <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium">assistant</span>
-          <span className="font-mono">streaming…</span>
-        </div>
         <MarkdownBody content={text} />
+        <span className="ml-0.5 inline-block h-4 w-[2px] animate-cursor-blink bg-foreground/70" />
       </div>
+    </div>
+  );
+}
+
+function ThinkingIndicator(): ReactElement {
+  return (
+    <div className="flex justify-start gap-2">
+      <CopilotAvatar />
+      <div className="flex items-center gap-1.5 rounded-lg bg-muted px-4 py-3">
+        <span className="inline-block h-2 w-2 animate-thinking-dot rounded-full bg-foreground/50" />
+        <span className="inline-block h-2 w-2 animate-thinking-dot rounded-full bg-foreground/50 [animation-delay:0.2s]" />
+        <span className="inline-block h-2 w-2 animate-thinking-dot rounded-full bg-foreground/50 [animation-delay:0.4s]" />
+      </div>
+    </div>
+  );
+}
+
+function CopilotAvatar(): ReactElement {
+  return (
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-[11px] font-bold text-white shadow-sm">
+      AI
     </div>
   );
 }
