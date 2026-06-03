@@ -9,6 +9,8 @@ import {
   approveAll,
   type CopilotSession
 } from "@github/copilot-sdk";
+import { join } from "node:path";
+import { existsSync } from "node:fs";
 import type { AiProvider } from "./provider.js";
 import {
   DEFAULT_COPILOT_MODEL,
@@ -27,7 +29,32 @@ import {
  *
  * A single `CopilotClient` is started lazily and reused across calls; each
  * request opens a short-lived session and disconnects when it idles.
+ *
+ * IMPORTANT: The SDK internally uses `process.execPath` to spawn the CLI
+ * subprocess when `cliPath` ends in `.js`. Inside Electron, `process.execPath`
+ * is `electron.exe` — not Node.js — which causes immediate exit. We solve this
+ * by passing `cliPath` to the npm-generated executable shim (`.cmd` on Windows,
+ * shell script on Unix) which invokes the correct Node binary.
  */
+
+/**
+ * Resolves the path to the `@github/copilot` CLI executable shim that npm
+ * generates in `node_modules/.bin/`. This shim properly invokes node regardless
+ * of the Electron runtime environment.
+ */
+function resolveCopilotCliPath(): string {
+  // Prefer the npm-generated bin shim — it's a proper executable that launches
+  // node + the CLI script without relying on process.execPath.
+  const binDir = join(__dirname, "..", "..", "..", "node_modules", ".bin");
+  const shimCmd = join(binDir, "copilot.cmd"); // Windows
+  const shimUnix = join(binDir, "copilot");    // macOS/Linux
+
+  if (process.platform === "win32" && existsSync(shimCmd)) return shimCmd;
+  if (process.platform !== "win32" && existsSync(shimUnix)) return shimUnix;
+
+  // Fallback: let the SDK resolve via its default getBundledCliPath()
+  return "";
+}
 
 let clientPromise: Promise<CopilotClient> | null = null;
 let clientAuthKey: string | null = null;
@@ -54,9 +81,11 @@ async function getClient(): Promise<CopilotClient> {
   }
   clientAuthKey = authKey;
   clientPromise = (async () => {
-    const c = new CopilotClient(
-      token ? { gitHubToken: token } : { useLoggedInUser: true }
-    );
+    const cliPath = resolveCopilotCliPath();
+    const c = new CopilotClient({
+      ...(token ? { gitHubToken: token } : { useLoggedInUser: true }),
+      ...(cliPath ? { cliPath } : {})
+    });
     await c.start();
     return c;
   })();
