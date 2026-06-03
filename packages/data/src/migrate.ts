@@ -316,6 +316,13 @@ const migrations: Migration[] = [
         updated_at  INTEGER NOT NULL
       );
     `
+  },
+  {
+    version: 11,
+    name: "view-chat-instructions",
+    up: `
+      ALTER TABLE views ADD COLUMN chat_instructions TEXT NOT NULL DEFAULT '';
+    `
   }
 ];
 

@@ -241,12 +241,23 @@ function ProviderModelBar(props: {
 }): ReactElement {
   const { session, models, onChangeModel } = props;
   const currentModel = session.model ?? "";
+  const { updateSession } = useChatStore();
   return (
     <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-1.5 text-[11px]">
       <span className="text-muted-foreground">Provider</span>
       <span className="rounded bg-background px-1.5 py-0.5 font-mono">
         {session.provider}
       </span>
+      {session.provider === "echo" && (
+        <button
+          type="button"
+          className="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-primary hover:bg-primary/20"
+          onClick={() => void updateSession(session.id, { provider: "copilot" })}
+          title="Switch this session to the Copilot provider"
+        >
+          ↑ Upgrade to Copilot
+        </button>
+      )}
       {session.provider === "copilot" && (
         <>
           <span className="text-muted-foreground">· Model</span>

@@ -141,6 +141,7 @@ export const views = sqliteTable("views", {
   agentIds: text("agent_ids").notNull().default("[]"),
   parameters: text("parameters").notNull().default("{}"),
   templateId: text("template_id"),
+  chatInstructions: text("chat_instructions").notNull().default(""),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull()
 });

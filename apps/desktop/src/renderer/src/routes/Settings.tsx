@@ -162,6 +162,10 @@ export function Settings(): ReactElement {
 
         <Separator />
 
+        <ChatInstructionsSection />
+
+        <Separator />
+
         <ExtensionsSection />
 
         <Separator />
@@ -551,6 +555,57 @@ function CopilotSection(): ReactElement {
             Clear token
           </Button>
         </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Chat Instructions ────────────────────────────────────────────────────────
+
+function ChatInstructionsSection(): ReactElement {
+  const { settings, load, setSetting } = useSettingsStore();
+  const [value, setValue] = useState("");
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    setValue(settings["ai.chat.globalInstructions"] ?? "");
+    setDirty(false);
+  }, [settings]);
+
+  const save = async (): Promise<void> => {
+    await setSetting("ai.chat.globalInstructions", value);
+    setDirty(false);
+  };
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-semibold">Chat Instructions</h2>
+      <div className="space-y-2">
+        <Label htmlFor="global-instructions">Global system prompt</Label>
+        <textarea
+          id="global-instructions"
+          className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          placeholder="Instructions applied to every chat session (e.g. persona, tone, rules)…"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setDirty(true);
+          }}
+        />
+        <p className="text-[11px] text-muted-foreground">
+          These instructions are prepended to all chat system prompts — both the
+          sidebar chat and customer-specific chats. Per-view instructions can
+          further customise individual customer chats.
+        </p>
+        {dirty && (
+          <Button size="sm" onClick={() => void save()}>
+            Save instructions
+          </Button>
+        )}
       </div>
     </section>
   );
