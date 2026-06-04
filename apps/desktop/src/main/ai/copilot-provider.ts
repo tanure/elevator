@@ -27,6 +27,12 @@ import {
  *
  * A single `CopilotClient` is started lazily and reused across calls; each
  * request opens a short-lived session and disconnects when it idles.
+ *
+ * IMPORTANT: The SDK uses `process.execPath` to spawn the CLI when `cliPath`
+ * ends in `.js`. In Electron, `process.execPath` is `electron.exe`. We pass
+ * `env: { ELECTRON_RUN_AS_NODE: "1" }` so the spawned Electron process behaves
+ * as a standard Node.js runtime — the official Electron mechanism for child
+ * process spawning.
  */
 
 let clientPromise: Promise<CopilotClient> | null = null;
@@ -54,9 +60,18 @@ async function getClient(): Promise<CopilotClient> {
   }
   clientAuthKey = authKey;
   clientPromise = (async () => {
-    const c = new CopilotClient(
-      token ? { gitHubToken: token } : { useLoggedInUser: true }
-    );
+    const c = new CopilotClient({
+      ...(token ? { gitHubToken: token } : { useLoggedInUser: true }),
+      // ELECTRON_RUN_AS_NODE makes electron.exe behave as pure Node.js when
+      // the SDK spawns the CLI subprocess via process.execPath.
+      // NODE_NO_WARNINGS suppresses the experimental SQLite warning that the
+      // SDK misinterprets as a fatal stderr error.
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: "1",
+        NODE_NO_WARNINGS: "1"
+      }
+    });
     await c.start();
     return c;
   })();

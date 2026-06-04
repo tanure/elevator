@@ -3,7 +3,9 @@ import {
   appendChatMessage,
   getAgent,
   getChatSession,
+  getView,
   listChatMessages,
+  getSetting,
   touchChatSession,
   updateChatSession
 } from "@elevator/data";
@@ -20,7 +22,7 @@ import type {
 } from "@elevator/shared";
 import { BrowserWindow } from "electron";
 import { getDb } from "../db.js";
-import { getProvider } from "./registry.js";
+import { getProvider, getActiveProvider } from "./registry.js";
 import { dispatchAgentTool, listAgentTools } from "./tools.js";
 
 const TITLE_MAX = 60;
@@ -75,8 +77,67 @@ export async function sendChatMessage(
   if (!rawSession) {
     throw new Error(`Unknown chat session: ${sessionId}`);
   }
+
+  // Auto-upgrade: if session is still on "echo" but copilot is now the active
+  // provider, transparently upgrade the session so it uses the real LLM.
+  if (rawSession.provider === "echo" && getActiveProvider() === "copilot") {
+    rawSession.provider = "copilot";
+    await updateChatSession(db, sessionId, { provider: "copilot" });
+  }
+
   const agent = rawSession.agentId ? await getAgent(db, rawSession.agentId) : null;
   let session = mergeAgentIntoSession(rawSession, agent);
+
+  // Global chat instructions — prepended to every chat session's system prompt.
+  const globalInstructions = await getSetting(db, "ai.chat.globalInstructions");
+
+  // View-specific chat instructions — applied when contextPayload references a view.
+  let viewInstructions: string | null = null;
+  if (contextPayload && typeof contextPayload === "object") {
+    const viewRef = (contextPayload as Record<string, unknown>).view;
+    if (typeof viewRef === "string" && viewRef.startsWith("view:")) {
+      const viewId = viewRef.slice(5);
+      const view = await getView(db, viewId);
+      if (view?.chatInstructions) {
+        viewInstructions = view.chatInstructions;
+      }
+    }
+  }
+
+  // Compose the full system prompt: global → view → agent/session (already merged)
+  const instructionParts: string[] = [];
+  if (globalInstructions?.trim()) instructionParts.push(globalInstructions.trim());
+  if (viewInstructions?.trim()) instructionParts.push(viewInstructions.trim());
+  if (session.systemPrompt.trim()) instructionParts.push(session.systemPrompt.trim());
+  session = { ...session, systemPrompt: instructionParts.join("\n\n") };
+
+  // Enrich context: if no explicit contextPayload is supplied (sidebar chat),
+  // inject a lightweight summary of the app's capabilities so the model knows
+  // what integrations and agents are available.
+  if (!contextPayload) {
+    const { listAgents, listIntegrations } = await import("@elevator/data");
+    const [agents, integrations] = await Promise.all([
+      listAgents(db),
+      listIntegrations(db)
+    ]);
+    const connected = integrations.filter((i) => i.status === "connected");
+    if (agents.length > 0 || connected.length > 0) {
+      const parts: string[] = [];
+      if (agents.length > 0) {
+        parts.push(
+          "Available agents: " +
+            agents.map((a) => `${a.name}${a.goal ? ` (${a.goal})` : ""}`).join(", ")
+        );
+      }
+      if (connected.length > 0) {
+        parts.push(
+          "Connected integrations: " +
+            connected.map((i) => i.displayName || i.name).join(", ")
+        );
+      }
+      contextPayload = { appContext: parts.join(". ") };
+    }
+  }
 
   // Phase 5 (M11): renderer may attach a contextPayload describing the current
   // view, selected card, date, etc. We prepend it to the system prompt as a

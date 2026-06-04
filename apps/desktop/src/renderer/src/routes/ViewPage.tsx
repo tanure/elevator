@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { useParams } from "react-router-dom";
-import { ArrowDown, ArrowUp, MessageSquare, Pencil, Plus, Save, X } from "lucide-react";
+import { ArrowDown, ArrowUp, MessageSquare, Pencil, Plus, Save, Settings2, X } from "lucide-react";
 import type { DashboardLayout, ViewRecord } from "@elevator/shared";
 import { Button } from "@renderer/components/ui/button";
 import { ChatPanel } from "@renderer/components/chat/ChatPanel";
@@ -19,6 +19,8 @@ export function ViewPage(): ReactElement {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const [chatInstructions, setChatInstructions] = useState("");
 
   const { extensions, load: loadExtensions } = useExtensionsStore();
   const { createFromView } = useViewTemplatesStore();
@@ -32,6 +34,7 @@ export function ViewPage(): ReactElement {
     try {
       const v = await window.elevator.views.get(viewId);
       setView(v);
+      setChatInstructions(v?.chatInstructions ?? "");
       if (v?.layoutId) {
         const l = await window.elevator.dashboardLayouts.get(v.layoutId);
         setLayout(l);
@@ -148,6 +151,14 @@ export function ViewPage(): ReactElement {
                 <Save className="mr-1 h-3.5 w-3.5" />
                 Save as template
               </Button>
+              <Button
+                size="sm"
+                variant={instructionsOpen ? "default" : "outline"}
+                onClick={() => setInstructionsOpen((v) => !v)}
+                title="Chat instructions for this view"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+              </Button>
               {editing && (
                 <div className="relative">
                   <Button
@@ -199,6 +210,38 @@ export function ViewPage(): ReactElement {
               </Button>
             </div>
           </div>
+
+          {instructionsOpen && (
+            <div className="mb-4 rounded-md border bg-muted/30 p-4 space-y-2">
+              <label className="text-sm font-medium" htmlFor="view-chat-instructions">
+                Chat instructions for {view.name}
+              </label>
+              <textarea
+                id="view-chat-instructions"
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="Instructions specific to this view's chat (e.g. customer context, rules, persona)…"
+                value={chatInstructions}
+                onChange={(e) => setChatInstructions(e.target.value)}
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    await window.elevator.views.update(viewId!, {
+                      chatInstructions
+                    });
+                    setInstructionsOpen(false);
+                  }}
+                >
+                  Save
+                </Button>
+                <p className="text-[11px] text-muted-foreground">
+                  These instructions are prepended to the chat system prompt when
+                  chatting in this view.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             {slots.map((slot, index) => {

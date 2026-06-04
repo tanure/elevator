@@ -862,6 +862,8 @@ export interface ViewRecord {
   parameters: Record<string, unknown>;
   /** Set when the view was created from a template. */
   templateId: string | null;
+  /** Custom system prompt instructions for this view's chat sessions. */
+  chatInstructions: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -875,6 +877,7 @@ export interface CreateViewInput {
   agentIds?: string[];
   parameters?: Record<string, unknown>;
   templateId?: string | null;
+  chatInstructions?: string;
 }
 
 export interface UpdateViewInput {
@@ -885,6 +888,7 @@ export interface UpdateViewInput {
   defaultChatSessionId?: string | null;
   agentIds?: string[];
   parameters?: Record<string, unknown>;
+  chatInstructions?: string;
 }
 
 /**

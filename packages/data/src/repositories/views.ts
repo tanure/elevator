@@ -27,6 +27,7 @@ function rowToView(row: typeof views.$inferSelect): ViewRecord {
     agentIds: parseJson<string[]>(row.agentIds, []),
     parameters: parseJson<Record<string, unknown>>(row.parameters, {}),
     templateId: row.templateId ?? null,
+    chatInstructions: row.chatInstructions ?? "",
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   };
@@ -64,6 +65,7 @@ export async function createView(
     agentIds: JSON.stringify(input.agentIds ?? []),
     parameters: JSON.stringify(input.parameters ?? {}),
     templateId: input.templateId ?? null,
+    chatInstructions: input.chatInstructions ?? "",
     createdAt: now,
     updatedAt: now
   });
@@ -88,6 +90,8 @@ export async function updateView(
     patch.agentIds = JSON.stringify(input.agentIds);
   if (input.parameters !== undefined)
     patch.parameters = JSON.stringify(input.parameters);
+  if (input.chatInstructions !== undefined)
+    patch.chatInstructions = input.chatInstructions;
   await db.update(views).set(patch).where(eq(views.id, id));
   return getView(db, id);
 }

@@ -40,6 +40,20 @@ const config = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)"
+      },
+      keyframes: {
+        "thinking-dot": {
+          "0%, 80%, 100%": { opacity: "0.3", transform: "scale(0.8)" },
+          "40%": { opacity: "1", transform: "scale(1)" }
+        },
+        "cursor-blink": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0" }
+        }
+      },
+      animation: {
+        "thinking-dot": "thinking-dot 1.4s ease-in-out infinite",
+        "cursor-blink": "cursor-blink 1s step-end infinite"
       }
     }
   },

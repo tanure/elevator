@@ -545,26 +545,42 @@ Design captured in [`docs/adr/ADR-0005-microsoft-agent-365.md`](docs/adr/ADR-000
   `ELEVATOR_ENABLE_M365_AGENT=1`, so the template never appears in
   the production catalogue.
 
-#### Phase 9B — Auth + token isolation (planned)
+#### Phase 9B — Auth + token isolation (✅ delivered)
 
-- Dedicated Entra app registration with delegated Agents scopes.
-- New `agentsFetch` helper analogous to `graphFetch` but with its own
-  token cache so Calendar/Mail tokens are not reused.
-- Loopback / device-code OAuth flow wired into the connect dialog.
+- Dedicated `agents-api.ts` helper analogous to `graph.ts` with its own
+  `ensureAgentsConnect` and `agentsFetch` functions.
+- Token isolation via per-instance cache (inherent in `cache.ts` design).
+- OAuth loopback + PKCE flow reusing existing `oauth.ts` infrastructure.
+- Endpoint allowlist security: only HTTPS to `graph.microsoft.com`,
+  `substrate.office.com`, `api.microsoft.com` — prevents bearer token
+  exfiltration to arbitrary endpoints.
+- Rate-limit handling: automatic retry on 429/503 with Retry-After parsing
+  (GET retries by default; POST requires explicit opt-in).
+- `agentId` made required in the config schema.
 
-#### Phase 9C — Agent invocation tools (planned)
+#### Phase 9C — Agent invocation tools (✅ delivered)
 
-- `agent.invoke`, `agent.threads.list`, `agent.threads.read` exposed
-  via the standard tool descriptor surface.
-- Sync hook populating a "Recent agent runs" dashboard card.
-- Per-agent rate-limit handling and retry policy.
+- `m365agent.invoke` — send a message to the agent (creates/continues threads),
+  polls for async agent reply with timeout.
+- `m365agent.threads.list` — list recent conversation threads.
+- `m365agent.threads.read` — read messages from a specific thread.
+- Tools use the Microsoft Graph beta chat substrate (`/me/chats`).
+- `sync()` hook returns `IntegrationSyncData { kind: "custom" }` with typed
+  `m365-agent.activity.v1` payload containing thread summaries (no sensitive
+  message bodies in cache — metadata only).
 
-#### Phase 9D — Dashboard + telemetry (planned)
+#### Phase 9D — Dashboard + telemetry (✅ delivered)
 
-- Dashboard card surfacing recent agent activity.
-- Wired into diagnostics snapshot so failures surface alongside other
-  integrations.
-- End-to-end tests against a sanctioned test tenant.
+- `AgentActivityCard.tsx` dashboard card showing recent agent threads with
+  timestamps, registered as `agent-activity` in the card catalogue.
+- Card filters by `templateId === "m365-agent"` and validates typed payload
+  (`m365-agent.activity.v1`) to avoid collisions with other custom sync data.
+- Diagnostics integration: `check()` returns auth status and notes agent
+  invocation depends on agent availability — surfaces in the integrations
+  table of the diagnostics snapshot automatically.
+- 14 unit tests in `m365-agent.test.ts` covering: endpoint allowlist
+  validation, agentsFetch retry behaviour, tool routing, input validation,
+  sync data shape and cache persistence, best-effort on fetch failures.
 
 ## Suggested repository layout
 
