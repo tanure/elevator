@@ -9,6 +9,8 @@ import {
   approveAll,
   type CopilotSession
 } from "@github/copilot-sdk";
+import { join, dirname } from "node:path";
+import { existsSync } from "node:fs";
 import type { AiProvider } from "./provider.js";
 import {
   DEFAULT_COPILOT_MODEL,
@@ -28,12 +30,32 @@ import {
  * A single `CopilotClient` is started lazily and reused across calls; each
  * request opens a short-lived session and disconnects when it idles.
  *
- * IMPORTANT: The SDK uses `process.execPath` to spawn the CLI when `cliPath`
- * ends in `.js`. In Electron, `process.execPath` is `electron.exe`. We pass
- * `env: { ELECTRON_RUN_AS_NODE: "1" }` so the spawned Electron process behaves
- * as a standard Node.js runtime — the official Electron mechanism for child
- * process spawning.
+ * NOTE: The SDK's default `getBundledCliPath()` incorrectly resolves to the
+ * interactive CLI (`@github/copilot/index.js`) instead of the SDK server entry
+ * (`@github/copilot/sdk/index.js`). We explicitly pass the correct `cliPath`.
+ * Additionally, since `process.execPath` in Electron is `electron.exe`, we set
+ * `ELECTRON_RUN_AS_NODE=1` so it behaves as a Node.js runtime.
  */
+
+/**
+ * Resolve the path to `@github/copilot/sdk/index.js` — the JSON-RPC server
+ * entry point that the SDK needs (as opposed to the interactive CLI).
+ */
+function resolveCopilotSdkServer(): string {
+  // Walk up from this compiled file to find the project's node_modules.
+  // In dev: __dirname is apps/desktop/src/main/ai (or dist equivalent)
+  // The monorepo root node_modules contains @github/copilot.
+  let dir = __dirname;
+  for (let i = 0; i < 10; i++) {
+    const candidate = join(dir, "node_modules", "@github", "copilot", "sdk", "index.js");
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  // Absolute fallback (should not be reached in normal installs)
+  return join(__dirname, "..", "..", "..", "node_modules", "@github", "copilot", "sdk", "index.js");
+}
 
 let clientPromise: Promise<CopilotClient> | null = null;
 let clientAuthKey: string | null = null;
@@ -62,6 +84,9 @@ async function getClient(): Promise<CopilotClient> {
   clientPromise = (async () => {
     const c = new CopilotClient({
       ...(token ? { gitHubToken: token } : { useLoggedInUser: true }),
+      // Explicit cliPath: the SDK's default resolution incorrectly picks the
+      // interactive CLI. We point to the SDK server entry instead.
+      cliPath: resolveCopilotSdkServer(),
       // ELECTRON_RUN_AS_NODE makes electron.exe behave as pure Node.js when
       // the SDK spawns the CLI subprocess via process.execPath.
       // NODE_NO_WARNINGS suppresses the experimental SQLite warning that the

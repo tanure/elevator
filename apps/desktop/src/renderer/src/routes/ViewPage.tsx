@@ -24,7 +24,7 @@ export function ViewPage(): ReactElement {
 
   const { extensions, load: loadExtensions } = useExtensionsStore();
   const { createFromView } = useViewTemplatesStore();
-  const { sessions, attachStreamListener, load: loadChat, createSession } =
+  const { sessions, attachStreamListener, load: loadChat, createSession, deleteSession } =
     useChatStore();
 
   // ── Load view + layout ──────────────────────────────────────────────────
@@ -125,8 +125,6 @@ export function ViewPage(): ReactElement {
   if (!view) {
     return <div className="p-6 text-sm text-destructive">View not found.</div>;
   }
-
-  const activeSession = sessions.find((s) => s.id === view.defaultChatSessionId);
 
   return (
     <ViewContext.Provider value={view}>
@@ -354,19 +352,38 @@ export function ViewPage(): ReactElement {
                     Context-aware · sees this view's parameters
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setDrawerOpen(false)}
-                  aria-label="Close chat"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    title="New chat (clears current)"
+                    onClick={async () => {
+                      const oldId = view.defaultChatSessionId;
+                      const session = await createSession({ title: `${view.name} chat` });
+                      await window.elevator.views.update(viewId!, {
+                        defaultChatSessionId: session.id
+                      });
+                      if (oldId) void deleteSession(oldId);
+                      await reload();
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setDrawerOpen(false)}
+                    aria-label="Close chat"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="min-h-0 flex-1">
                 <ChatPanel
-                  sessionId={activeSession?.id ?? view.defaultChatSessionId}
+                  sessionId={view.defaultChatSessionId}
                   contextPayload={contextPayload}
                   hideHeader
                 />
