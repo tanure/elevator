@@ -9,8 +9,7 @@ import {
   approveAll,
   type CopilotSession
 } from "@github/copilot-sdk";
-import { join, dirname } from "node:path";
-import { existsSync } from "node:fs";
+import { execSync } from "node:child_process";
 import type { AiProvider } from "./provider.js";
 import {
   DEFAULT_COPILOT_MODEL,
@@ -30,35 +29,38 @@ import {
  * A single `CopilotClient` is started lazily and reused across calls; each
  * request opens a short-lived session and disconnects when it idles.
  *
- * NOTE: The SDK's default `getBundledCliPath()` incorrectly resolves to the
- * interactive CLI (`@github/copilot/index.js`) instead of the SDK server entry
- * (`@github/copilot/sdk/index.js`). We explicitly pass the correct `cliPath`.
- * Additionally, since `process.execPath` in Electron is `electron.exe`, we set
- * `ELECTRON_RUN_AS_NODE=1` so it behaves as a Node.js runtime.
+ * NOTE: The Copilot SDK uses `process.execPath` to spawn the CLI subprocess.
+ * In Electron, this is `electron.exe` with an embedded Node.js (v22) that
+ * cannot properly run the Copilot CLI's `--headless` mode (the CLI requires
+ * Node >= 26). We resolve the system `node` binary and temporarily swap
+ * `process.execPath` during `client.start()` — a standard pattern used by
+ * VS Code extensions and other Electron apps that spawn Node child processes.
  */
 
-/**
- * Resolve the path to `@github/copilot/sdk/index.js` — the JSON-RPC server
- * entry point that the SDK needs (as opposed to the interactive CLI).
- */
-function resolveCopilotSdkServer(): string {
-  // Walk up from this compiled file to find the project's node_modules.
-  // In dev: __dirname is apps/desktop/src/main/ai (or dist equivalent)
-  // The monorepo root node_modules contains @github/copilot.
-  let dir = __dirname;
-  for (let i = 0; i < 10; i++) {
-    const candidate = join(dir, "node_modules", "@github", "copilot", "sdk", "index.js");
-    if (existsSync(candidate)) return candidate;
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
+let systemNodePath: string | null = null;
+
+/** Locate the system Node.js binary (>= v26 required by @github/copilot). */
+function getSystemNodePath(): string {
+  if (systemNodePath) return systemNodePath;
+  try {
+    // `where node` on Windows, `which node` on Unix
+    const cmd = process.platform === "win32" ? "where.exe node" : "which node";
+    const result = execSync(cmd, { encoding: "utf8", timeout: 3000 }).trim();
+    // `where` may return multiple lines; take the first
+    systemNodePath = result.split(/\r?\n/)[0].trim();
+  } catch {
+    // Fallback to common paths
+    systemNodePath = process.platform === "win32"
+      ? "C:\\Program Files\\nodejs\\node.exe"
+      : "/usr/local/bin/node";
   }
-  // Absolute fallback (should not be reached in normal installs)
-  return join(__dirname, "..", "..", "..", "node_modules", "@github", "copilot", "sdk", "index.js");
+  return systemNodePath;
 }
 
 let clientPromise: Promise<CopilotClient> | null = null;
 let clientAuthKey: string | null = null;
+/** The true Electron execPath — captured once at module load to avoid races. */
+const ELECTRON_EXEC_PATH = process.execPath;
 
 /**
  * Returns a started `CopilotClient` keyed by the current token fingerprint.
@@ -84,20 +86,22 @@ async function getClient(): Promise<CopilotClient> {
   clientPromise = (async () => {
     const c = new CopilotClient({
       ...(token ? { gitHubToken: token } : { useLoggedInUser: true }),
-      // Explicit cliPath: the SDK's default resolution incorrectly picks the
-      // interactive CLI. We point to the SDK server entry instead.
-      cliPath: resolveCopilotSdkServer(),
-      // ELECTRON_RUN_AS_NODE makes electron.exe behave as pure Node.js when
-      // the SDK spawns the CLI subprocess via process.execPath.
       // NODE_NO_WARNINGS suppresses the experimental SQLite warning that the
-      // SDK misinterprets as a fatal stderr error.
+      // SDK treats as a fatal stderr error.
       env: {
         ...process.env,
-        ELECTRON_RUN_AS_NODE: "1",
         NODE_NO_WARNINGS: "1"
       }
     });
-    await c.start();
+    // The SDK spawns the CLI via process.execPath which in Electron is
+    // electron.exe (embedded Node 22). The Copilot CLI requires Node >= 26
+    // for --headless mode. Swap to the system node during start().
+    process.execPath = getSystemNodePath();
+    try {
+      await c.start();
+    } finally {
+      process.execPath = ELECTRON_EXEC_PATH;
+    }
     return c;
   })();
   return clientPromise;

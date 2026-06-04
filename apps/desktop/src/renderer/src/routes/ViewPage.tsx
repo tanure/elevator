@@ -24,7 +24,7 @@ export function ViewPage(): ReactElement {
 
   const { extensions, load: loadExtensions } = useExtensionsStore();
   const { createFromView } = useViewTemplatesStore();
-  const { sessions, attachStreamListener, load: loadChat, createSession, deleteSession } =
+  const { attachStreamListener, load: loadChat, createSession, deleteSession } =
     useChatStore();
 
   // ── Load view + layout ──────────────────────────────────────────────────
