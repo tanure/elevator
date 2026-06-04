@@ -41,8 +41,7 @@ export function Chat(): ReactElement {
     selectSession,
     createSession,
     updateSession,
-    deleteSession,
-    attachStreamListener
+    deleteSession
   } = useChatStore();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -52,11 +51,6 @@ export function Chat(): ReactElement {
     void load();
     void loadAgents();
   }, [load, loadAgents]);
-
-  useEffect(() => {
-    const off = attachStreamListener();
-    return off;
-  }, [attachStreamListener]);
 
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeSessionId) ?? null,

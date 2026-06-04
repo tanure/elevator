@@ -24,7 +24,7 @@ export function ViewPage(): ReactElement {
 
   const { extensions, load: loadExtensions } = useExtensionsStore();
   const { createFromView } = useViewTemplatesStore();
-  const { attachStreamListener, load: loadChat, createSession, deleteSession } =
+  const { createSession, deleteSession } =
     useChatStore();
 
   // ── Load view + layout ──────────────────────────────────────────────────
@@ -57,7 +57,6 @@ export function ViewPage(): ReactElement {
     if (!view || !viewId) return;
     if (view.defaultChatSessionId) return;
     (async () => {
-      await loadChat();
       const session = await createSession({ title: `${view.name} chat` });
       await window.elevator.views.update(viewId, {
         defaultChatSessionId: session.id
@@ -66,13 +65,6 @@ export function ViewPage(): ReactElement {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view?.id, view?.defaultChatSessionId]);
-
-  useEffect(() => {
-    if (!drawerOpen) return;
-    void loadChat();
-    const off = attachStreamListener();
-    return off;
-  }, [drawerOpen, loadChat, attachStreamListener]);
 
   // ── Layout mutations (persist immediately, then reload) ────────────────
   const persistSlots = async (

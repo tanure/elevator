@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -29,12 +30,14 @@ import type {
 } from "@elevator/shared";
 
 /**
- * Reusable chat surface (transcript + composer) for a single session. Pulls
- * state from the global chat store so only one panel is "active" at a time;
- * mounting with a specific `sessionId` switches the store to that session.
+ * Self-contained chat surface for a single session. When `sessionId` is
+ * provided, the panel manages its own messages, streaming, and sending state
+ * locally — it does NOT mutate the global chat store's activeSessionId. This
+ * allows multiple ChatPanel instances (e.g. sidebar + customer view) to coexist
+ * without interfering with each other.
  *
- * Phase 5 (M11): consumers can pass `contextPayload` — an arbitrary JSON blob
- * (e.g. `{ view: "dashboard", date }`) — which is forwarded with every send and
+ * Consumers can pass `contextPayload` — an arbitrary JSON blob (e.g.
+ * `{ view: "dashboard", date }`) — which is forwarded with every send and
  * prepended to the system prompt by the orchestrator.
  */
 export function ChatPanel(props: {
@@ -47,40 +50,58 @@ export function ChatPanel(props: {
   /** Override empty-state CTA. Defaults to "New chat". */
   emptyAction?: ReactNode;
 }): ReactElement {
-  const {
-    sessions,
-    activeSessionId,
-    messages,
-    sending,
-    error,
-    streamingText,
-    streamingSessionId,
-    selectSession,
-    send,
-    createSession,
-    updateSession
-  } = useChatStore();
+  const { createSession } = useChatStore();
 
-  // Switch the global active session to the one this panel was mounted for.
-  useEffect(() => {
-    if (props.sessionId && props.sessionId !== activeSessionId) {
-      void selectSession(props.sessionId);
-    }
-  }, [props.sessionId, activeSessionId, selectSession]);
-
-  const session = sessions.find((s) => s.id === props.sessionId) ?? null;
-  const liveStream =
-    streamingSessionId && streamingSessionId === props.sessionId
-      ? streamingText
-      : null;
-
+  // ── Local panel state (isolated per instance) ──────────────────────────
+  const [session, setSession] = useState<ChatSession | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [streamingText, setStreamingText] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const scrollRef = useRef<HTMLDivElement | null>(null);
   const [models, setModels] = useState<CopilotModel[]>([]);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Lazily load the Copilot model catalog whenever the panel is showing a
-  // copilot-backed session. Failures are non-fatal (user remains on whatever
-  // model the session has).
+  // Load session metadata + messages when sessionId changes
+  useEffect(() => {
+    if (!props.sessionId) {
+      setSession(null);
+      setMessages([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [sess, msgs] = await Promise.all([
+          window.elevator.chat.getSession(props.sessionId!),
+          window.elevator.chat.listMessages(props.sessionId!)
+        ]);
+        if (!cancelled) {
+          setSession(sess);
+          setMessages(msgs);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [props.sessionId]);
+
+  // Subscribe to stream events for THIS session only
+  useEffect(() => {
+    if (!props.sessionId) return;
+    const sessionId = props.sessionId;
+    const off = window.elevator.chat.onStream((event) => {
+      if (event.sessionId !== sessionId) return;
+      if (event.kind === "chunk") {
+        setStreamingText(event.text);
+      }
+      // end/error handled by the send promise resolution
+    });
+    return off;
+  }, [props.sessionId]);
+
+  // Lazily load the Copilot model catalog
   useEffect(() => {
     if (session?.provider !== "copilot") {
       setModels([]);
@@ -89,21 +110,47 @@ export function ChatPanel(props: {
     let cancelled = false;
     void window.elevator.copilot
       .listModels()
-      .then((list) => {
-        if (!cancelled) setModels(list);
-      })
-      .catch(() => {
-        if (!cancelled) setModels([]);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .then((list) => { if (!cancelled) setModels(list); })
+      .catch(() => { if (!cancelled) setModels([]); });
+    return () => { cancelled = true; };
   }, [session?.provider, session?.id]);
 
+  // Auto-scroll on new content
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length, sending, streamingText]);
+
+  const handleUpdateSession = useCallback(async (patch: Record<string, unknown>) => {
+    if (!props.sessionId) return;
+    const updated = await window.elevator.chat.updateSession(props.sessionId, patch);
+    if (updated) setSession(updated);
+  }, [props.sessionId]);
+
+  const handleSend = useCallback(async (content: string) => {
+    if (!props.sessionId) return;
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    setSending(true);
+    setError(null);
+    setStreamingText("");
+    try {
+      const { userMessage, assistantMessage } = await window.elevator.chat.send(
+        props.sessionId,
+        trimmed,
+        props.contextPayload ?? undefined
+      );
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      // Refresh session metadata (provider may have been auto-upgraded)
+      const sess = await window.elevator.chat.getSession(props.sessionId);
+      if (sess) setSession(sess);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSending(false);
+      setStreamingText(null);
+    }
+  }, [props.sessionId, props.contextPayload]);
 
   if (!session) {
     return (
@@ -128,8 +175,10 @@ export function ChatPanel(props: {
     const value = draft.trim();
     if (!value || sending) return;
     setDraft("");
-    void send(value, props.contextPayload ?? undefined);
+    void handleSend(value);
   }
+
+  const liveStream = streamingText;
 
   return (
     <section className="flex h-full flex-col">
@@ -177,7 +226,8 @@ export function ChatPanel(props: {
       <ProviderModelBar
         session={session}
         models={models}
-        onChangeModel={(model) => void updateSession(session.id, { model })}
+        onChangeModel={(model) => void handleUpdateSession({ model })}
+        onUpgradeProvider={() => void handleUpdateSession({ provider: "copilot" })}
       />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
@@ -238,21 +288,21 @@ function ProviderModelBar(props: {
   session: ChatSession;
   models: CopilotModel[];
   onChangeModel: (model: string | null) => void;
+  onUpgradeProvider?: () => void;
 }): ReactElement {
-  const { session, models, onChangeModel } = props;
+  const { session, models, onChangeModel, onUpgradeProvider } = props;
   const currentModel = session.model ?? "";
-  const { updateSession } = useChatStore();
   return (
     <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-1.5 text-[11px]">
       <span className="text-muted-foreground">Provider</span>
       <span className="rounded bg-background px-1.5 py-0.5 font-mono">
         {session.provider}
       </span>
-      {session.provider === "echo" && (
+      {session.provider === "echo" && onUpgradeProvider && (
         <button
           type="button"
           className="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-primary hover:bg-primary/20"
-          onClick={() => void updateSession(session.id, { provider: "copilot" })}
+          onClick={onUpgradeProvider}
           title="Switch this session to the Copilot provider"
         >
           ↑ Upgrade to Copilot
