@@ -20,5 +20,8 @@
   },
   "devDependencies": {
     "electron": "^39.8.10"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
   }
 }
